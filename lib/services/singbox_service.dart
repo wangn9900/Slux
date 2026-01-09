@@ -13,6 +13,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import '../core/ffi/libbox.dart'; // Import FFI bindings
+import 'vpn_manager.dart'; // Import VPN manager
 
 // 1. 定义接口
 abstract class ISingboxService {
@@ -133,12 +134,39 @@ class MobileSingboxService implements ISingboxService {
     final content = await file.readAsString();
 
     if (kDebugMode) {
-      print("Starting Sing-box (Mobile FFI)...");
+      print("Starting Sing-box (Mobile FFI with VPN)...");
     }
 
-    // 调用 FFI
-    // 注意：这里的 LibBox 调用是同步的还是异步的取决于 Go 实现，通常 Start 是阻塞的还是返回的？
-    // 假设 LibBox.start 启动一个新的 goroutine 并返回 nil
+    // Android 需要先启动 VPN Service
+    if (Platform.isAndroid) {
+      // 检查权限
+      final hasPermission = await VpnManager.checkVpnPermission();
+      if (!hasPermission) {
+        // 请求权限并启动 VPN
+        final started = await VpnManager.startVpn();
+        if (!started) {
+          throw Exception("Failed to start VPN service");
+        }
+      } else {
+        // 已有权限，直接启动
+        await VpnManager.startVpn();
+      }
+
+      // 等待 VPN 建立
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      // 获取 TUN FD
+      final tunFd = await VpnManager.getTunFd();
+      if (tunFd < 0) {
+        throw Exception("Failed to get TUN file descriptor");
+      }
+
+      if (kDebugMode) {
+        print("VPN started, TUN FD: $tunFd");
+      }
+    }
+
+    // 调用 FFI 启动 Sing-box
     final error = LibBox.start(content);
     if (error != null) {
       throw Exception("Failed to start libbox: $error");
