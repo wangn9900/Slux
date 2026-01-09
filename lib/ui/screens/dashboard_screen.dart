@@ -243,15 +243,21 @@ class _ModeSwitcherState extends State<_ModeSwitcher> {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.5),
+        color: Theme.of(context).colorScheme.surface.withOpacity(0.5),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.withOpacity(0.2)),
+        border: Border.all(
+          color: Theme.of(context).dividerColor.withOpacity(0.1),
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           _buildButton('规则', _mode == '规则'),
-          Container(width: 1, height: 20, color: Colors.grey.withOpacity(0.2)),
+          Container(
+            width: 1,
+            height: 20,
+            color: Theme.of(context).dividerColor.withOpacity(0.1),
+          ),
           _buildButton('全局', _mode == '全局'),
         ],
       ),
@@ -267,7 +273,9 @@ class _ModeSwitcherState extends State<_ModeSwitcher> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.white : Colors.transparent,
+          color: isSelected
+              ? Theme.of(context).colorScheme.primary
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(11),
         ),
         child: Text(
@@ -275,7 +283,7 @@ class _ModeSwitcherState extends State<_ModeSwitcher> {
           style: TextStyle(
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
             color: isSelected
-                ? AppTheme.primary
+                ? Colors.white
                 : Theme.of(context).textTheme.bodySmall?.color,
           ),
         ),
@@ -664,8 +672,11 @@ class _CompactStat extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.8),
+        color: Theme.of(context).colorScheme.surface.withOpacity(0.5),
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Theme.of(context).dividerColor.withOpacity(0.1),
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
