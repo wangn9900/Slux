@@ -215,7 +215,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    // 背景色：亮色模式下使用浅灰，深色模式下使用深灰/黑，避免纯白太刺眼
+    // 背景色：亮色模式下使用浅灰，深色模式下使用深灰/黑等
     final backgroundColor =
         isDark ? const Color(0xFF0B0F19) : const Color(0xFFF8FAFC);
 
@@ -225,15 +225,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
+            constraints: const BoxConstraints(maxWidth: 400),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _buildBrandingContent(),
-                const SizedBox(height: 48),
+                _buildBrandingContent(), // Logo区域
+                const SizedBox(height: 32),
                 Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
+                      const EdgeInsets.symmetric(horizontal: 32, vertical: 32),
                   decoration: BoxDecoration(
                     color: theme.cardColor,
                     borderRadius: BorderRadius.circular(24),
@@ -261,41 +261,41 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Container(
-          width: 80,
-          height: 80,
+          width: 72,
+          height: 72,
           decoration: BoxDecoration(
             gradient: const LinearGradient(
               colors: [Color(0xFF3B82F6), Color(0xFF8B5CF6)],
             ),
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(18),
             boxShadow: [
               BoxShadow(
                 color: const Color(0xFF3B82F6).withOpacity(0.3),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
+                blurRadius: 16,
+                offset: const Offset(0, 8),
               ),
             ],
           ),
           child: const Icon(
             LucideIcons.zap,
-            size: 40,
+            size: 36,
             color: Colors.white,
           ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 16),
         Text(
           'Welcome to SLux',
           style: TextStyle(
-            fontSize: 28,
+            fontSize: 24,
             fontWeight: FontWeight.bold,
             color: theme.textTheme.displayLarge?.color,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 4),
         Text(
           'Your Premium Gateway to the World',
           style: TextStyle(
-            fontSize: 16,
+            fontSize: 14,
             color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6),
           ),
           textAlign: TextAlign.center,
@@ -314,18 +314,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         Text(
           _title,
           style: TextStyle(
-            fontSize: 24,
+            fontSize: 20,
             fontWeight: FontWeight.bold,
             color: theme.textTheme.bodyMedium?.color,
           ),
           textAlign: TextAlign.center,
         ),
-        const SizedBox(height: 32),
+        const SizedBox(height: 24),
 
         // Email
         _LoginInput(
           controller: _emailController,
-          label: '邮箱账号',
+          label: '邮箱账号', // 汉化
           icon: LucideIcons.mail,
           hint: 'user@example.com',
         ),
@@ -346,7 +346,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
               const SizedBox(width: 12),
               SizedBox(
-                height: 50, // Match input height ish
+                height: 48,
                 child: OutlinedButton(
                   onPressed: (_countdown > 0 || _isLoading)
                       ? null
@@ -355,8 +355,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),
                     side: BorderSide(color: theme.dividerColor),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
                   ),
-                  child: Text(_countdown > 0 ? '${_countdown}s' : '发送验证码'),
+                  child: Text(_countdown > 0 ? '${_countdown}s' : '发送'),
                 ),
               ),
             ],
@@ -367,15 +368,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         // Password
         _LoginInput(
           controller: _passwordController,
-          label: _mode == LoginMode.forgotPassword ? '新密码' : '密码',
+          label: _mode == LoginMode.forgotPassword ? '新密码' : '密码', // 汉化
           icon: LucideIcons.lock,
           isPassword: true,
           obscureText: !_showPassword,
           hint: '请输入密码',
           suffixIcon: IconButton(
-            icon: Icon(_showPassword ? LucideIcons.eye : LucideIcons.eyeOff,
-                size: 18),
-            onPressed: () => setState(() => _showPassword = !_showPassword),
+            icon: Icon(
+              _showPassword ? LucideIcons.eye : LucideIcons.eyeOff,
+              size: 18,
+              color: theme.textTheme.bodySmall?.color,
+            ),
+            onPressed: () {
+              setState(() {
+                _showPassword = !_showPassword;
+              });
+            },
           ),
         ),
         const SizedBox(height: 16),
@@ -420,17 +428,27 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   activeColor: theme.colorScheme.primary,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(4)),
-                  onChanged: (val) =>
-                      setState(() => _rememberMe = val ?? false),
+                  onChanged: (val) {
+                    setState(() {
+                      _rememberMe = val ?? false;
+                    });
+                  },
                 ),
               ),
               const SizedBox(width: 8),
               GestureDetector(
-                onTap: () => setState(() => _rememberMe = !_rememberMe),
-                child: Text('记住账号',
-                    style: TextStyle(
-                        fontSize: 14,
-                        color: theme.textTheme.bodyMedium?.color)),
+                onTap: () {
+                  setState(() {
+                    _rememberMe = !_rememberMe;
+                  });
+                },
+                child: Text(
+                  '记住账号',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: theme.textTheme.bodyMedium?.color,
+                  ),
+                ),
               ),
             ],
           ),
@@ -453,22 +471,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           style: ElevatedButton.styleFrom(
             backgroundColor: theme.colorScheme.primary,
             foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 20),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
           child: _isLoading
               ? const SizedBox(
                   width: 20,
                   height: 20,
                   child: CircularProgressIndicator(
-                      color: Colors.white, strokeWidth: 2))
-              : Text(_buttonText,
+                    color: Colors.white,
+                    strokeWidth: 2,
+                  ),
+                )
+              : Text(
+                  _buttonText,
                   style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.w600)),
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
         ),
 
-        const SizedBox(height: 24),
+        const SizedBox(height: 20),
 
         // Mode Switchers
         Row(
@@ -480,15 +506,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   _mode = LoginMode.register;
                   _errorMessage = null;
                 }),
-                child: Text('注册账号', style: TextStyle(color: linkColor)),
+                child: Text(
+                  '注册账号',
+                  style: TextStyle(color: linkColor, fontSize: 13),
+                ),
               ),
-              Text('|', style: TextStyle(color: theme.dividerColor)),
+              Text(
+                '|',
+                style: TextStyle(color: theme.dividerColor),
+              ),
               TextButton(
                 onPressed: () => setState(() {
                   _mode = LoginMode.forgotPassword;
                   _errorMessage = null;
                 }),
-                child: Text('找回密码', style: TextStyle(color: linkColor)),
+                child: Text(
+                  '找回密码',
+                  style: TextStyle(color: linkColor, fontSize: 13),
+                ),
               ),
             ] else ...[
               TextButton(
@@ -496,7 +531,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   _mode = LoginMode.login;
                   _errorMessage = null;
                 }),
-                child: Text('返回登录', style: TextStyle(color: linkColor)),
+                child: Text(
+                  '返回登录',
+                  style: TextStyle(color: linkColor, fontSize: 13),
+                ),
               ),
             ],
           ],
@@ -551,16 +589,22 @@ class _LoginInput extends StatelessWidget {
           child: TextField(
             controller: controller,
             obscureText: isPassword ? obscureText : false,
-            style: TextStyle(color: theme.textTheme.bodyMedium?.color),
+            style: TextStyle(
+                color: theme.textTheme.bodyMedium?.color, fontSize: 14),
             decoration: InputDecoration(
               hintText: hint,
               hintStyle: TextStyle(color: theme.textTheme.bodySmall?.color),
-              prefixIcon:
-                  Icon(icon, size: 18, color: theme.textTheme.bodySmall?.color),
+              prefixIcon: Icon(
+                icon,
+                size: 18,
+                color: theme.textTheme.bodySmall?.color,
+              ),
               suffixIcon: suffixIcon,
               border: InputBorder.none,
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 14,
+              ),
             ),
           ),
         ),
