@@ -37,10 +37,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     super.initState();
     // Start core update check
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
       try {
         await ref.read(coreManagerProvider.notifier).checkAndDownload();
-        // Load nodes from V2Board if logged in
-        _loadNodesFromV2Board();
+        if (mounted) _loadNodesFromV2Board();
       } catch (e) {
         if (kDebugMode) print('Update check failed: $e');
       }

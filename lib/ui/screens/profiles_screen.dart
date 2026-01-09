@@ -181,7 +181,10 @@ class _ProfilesScreenState extends ConsumerState<ProfilesScreen> {
         int.tryParse(_userInfo?['transfer_enable']?.toString() ?? '0') ?? 0;
     final u = int.tryParse(_userInfo?['u']?.toString() ?? '0') ?? 0;
     final d = int.tryParse(_userInfo?['d']?.toString() ?? '0') ?? 0;
-    final used = u + d;
+    var used = u + d;
+    if (used == 0) {
+      used = int.tryParse(_userInfo?['transfer_used']?.toString() ?? '0') ?? 0;
+    }
     final progress = total > 0 ? (used / total).clamp(0.0, 1.0) : 0.0;
 
     return Container(
