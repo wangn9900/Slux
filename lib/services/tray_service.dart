@@ -65,7 +65,7 @@ class TrayService {
 
     await _menu!.buildFrom([
       MenuItemLabel(
-        label: 'Show Slux',
+        label: '显示主界面',
         onClicked: (menuItem) async {
           await windowManager.show();
           await windowManager.focus();
@@ -73,14 +73,14 @@ class TrayService {
       ),
       MenuSeparator(),
       MenuItemLabel(
-        label: 'Clear Proxy',
+        label: '清理系统代理',
         onClicked: (menuItem) async {
           await SystemProxyHelper.clearSystemProxy();
         },
       ),
       MenuSeparator(),
       MenuItemLabel(
-        label: 'Exit',
+        label: '退出',
         onClicked: (menuItem) async {
           await SystemProxyHelper.clearSystemProxy();
           await windowManager.destroy();
