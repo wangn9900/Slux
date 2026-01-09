@@ -1,0 +1,13 @@
+{
+    "api_endpoints": [
+        "https://panel1.example.com",
+        "https://panel2.example.com",
+        "https://123.45.67.89:8443"
+    ],
+    "backup_endpoints": [
+        "https://backup1.example.com",
+        "https://backup2.example.com"
+    ],
+    "core_version": "1.8.0",
+    "notice": "欢迎使用 Slux！请在 OSS 中替换为您的真实 V2Board 地址。"
+}
