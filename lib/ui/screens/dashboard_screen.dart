@@ -149,7 +149,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final coreState = ref.watch(coreManagerProvider);
     final isUpdateError =
         coreState.statusMessage.toLowerCase().contains('failed') ||
-        coreState.statusMessage.toLowerCase().contains('error');
+            coreState.statusMessage.toLowerCase().contains('error');
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -341,11 +341,10 @@ class _ConnectButtonState extends ConsumerState<_ConnectButton>
           ),
           boxShadow: [
             BoxShadow(
-              color:
-                  (isConnected
-                          ? const Color(0xFF10B981)
-                          : const Color(0xFF3B82F6))
-                      .withOpacity(0.4),
+              color: (isConnected
+                      ? const Color(0xFF10B981)
+                      : const Color(0xFF3B82F6))
+                  .withOpacity(0.4),
               blurRadius: 30,
               spreadRadius: 5,
             ),
@@ -601,7 +600,7 @@ class _NodeSelector extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Selected Node',
+                    '当前节点',
                     style: TextStyle(
                       color: Theme.of(context).textTheme.bodySmall?.color,
                       fontSize: 12,
@@ -746,7 +745,7 @@ class _NodeSelectionDialogState extends ConsumerState<_NodeSelectionDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text("Select Node"),
+      title: const Text("选择节点"),
       content: SizedBox(
         width: double.maxFinite,
         child: ListView.builder(
