@@ -156,7 +156,7 @@ jobs:
           sudo apt-get install -y imagemagick
           
           # Create purple lightning icon
-          magick -size 1024x1024 xc:none -fill "#7C3AED" -draw "roundrectangle 0,0 1024,1024 100,100" \
+          convert -size 1024x1024 xc:none -fill "#7C3AED" -draw "roundrectangle 0,0 1024,1024 100,100" \
             -fill white -font DejaVu-Sans-Bold -pointsize 800 -gravity center -annotate +0+0 "⚡" \
             temp_icon.png
           
@@ -168,11 +168,11 @@ jobs:
           mkdir -p "$ANDROID_PATH/mipmap-xxhdpi"
           mkdir -p "$ANDROID_PATH/mipmap-xxxhdpi"
           
-          magick convert temp_icon.png -resize 48x48 "$ANDROID_PATH/mipmap-mdpi/ic_launcher.png"
-          magick convert temp_icon.png -resize 72x72 "$ANDROID_PATH/mipmap-hdpi/ic_launcher.png"
-          magick convert temp_icon.png -resize 96x96 "$ANDROID_PATH/mipmap-xhdpi/ic_launcher.png"
-          magick convert temp_icon.png -resize 144x144 "$ANDROID_PATH/mipmap-xxhdpi/ic_launcher.png"
-          magick convert temp_icon.png -resize 192x192 "$ANDROID_PATH/mipmap-xxxhdpi/ic_launcher.png"
+          convert temp_icon.png -resize 48x48 "$ANDROID_PATH/mipmap-mdpi/ic_launcher.png"
+          convert temp_icon.png -resize 72x72 "$ANDROID_PATH/mipmap-hdpi/ic_launcher.png"
+          convert temp_icon.png -resize 96x96 "$ANDROID_PATH/mipmap-xhdpi/ic_launcher.png"
+          convert temp_icon.png -resize 144x144 "$ANDROID_PATH/mipmap-xxhdpi/ic_launcher.png"
+          convert temp_icon.png -resize 192x192 "$ANDROID_PATH/mipmap-xxxhdpi/ic_launcher.png"
           
           rm temp_icon.png
       
