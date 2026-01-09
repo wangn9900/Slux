@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../providers/v2board_provider.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -14,12 +16,53 @@ class LoginScreen extends ConsumerStatefulWidget {
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+
   bool _isLoading = false;
   String? _errorMessage;
+
+  // 新增状态
+  bool _rememberMe = true;
+  bool _showPassword = false;
 
   @override
   void initState() {
     super.initState();
+    _loadSavedCredentials();
+  }
+
+  // 加载保存的账号
+  Future<void> _loadSavedCredentials() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedEmail = prefs.getString('saved_email');
+    if (savedEmail != null && savedEmail.isNotEmpty) {
+      if (mounted) {
+        setState(() {
+          _emailController.text = savedEmail;
+          _rememberMe = true;
+        });
+      }
+    }
+  }
+
+  // 保存或清除账号
+  Future<void> _saveCredentials() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (_rememberMe) {
+      await prefs.setString('saved_email', _emailController.text.trim());
+    } else {
+      await prefs.remove('saved_email');
+    }
+  }
+
+  Future<void> _launchUrl(String urlString) async {
+    final Uri url = Uri.parse(urlString);
+    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('无法打开链接: $urlString')),
+        );
+      }
+    }
   }
 
   Future<void> _handleLogin() async {
@@ -31,14 +74,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final v2board = ref.read(v2boardServiceProvider);
 
     try {
-      // 使用 V2BoardService 登录（会自动从 OSS 获取 API 地址）
       final loginResp = await v2board.login(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
 
       if (loginResp != null) {
-        // 登录成功，跳转到主页
+        // 登录成功
+        await _saveCredentials(); // 保存账号
+
         if (mounted) {
           context.go('/');
         }
@@ -179,13 +223,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Widget _buildLoginForm() {
     final theme = Theme.of(context);
+    final linkColor = theme.colorScheme.primary;
 
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'Sign In',
+          '账号登录', // 汉化
           style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
@@ -198,7 +243,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         // Email Input
         _LoginInput(
           controller: _emailController,
-          label: 'Email',
+          label: '邮箱账号', // 汉化
           icon: LucideIcons.mail,
           hint: 'user@example.com',
         ),
@@ -207,11 +252,62 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         // Password Input
         _LoginInput(
           controller: _passwordController,
-          label: 'Password',
+          label: '密码', // 汉化
           icon: LucideIcons.lock,
           isPassword: true,
-          hint: '••••••••',
+          obscureText: !_showPassword,
+          hint: '请输入密码',
+          suffixIcon: IconButton(
+            icon: Icon(
+              _showPassword ? LucideIcons.eye : LucideIcons.eyeOff,
+              size: 18,
+              color: theme.textTheme.bodySmall?.color,
+            ),
+            onPressed: () {
+              setState(() {
+                _showPassword = !_showPassword;
+              });
+            },
+          ),
         ),
+        const SizedBox(height: 16),
+
+        // 记住账号 Checkbox
+        Row(
+          children: [
+            SizedBox(
+              height: 24,
+              width: 24,
+              child: Checkbox(
+                value: _rememberMe,
+                activeColor: theme.colorScheme.primary,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(4)),
+                onChanged: (val) {
+                  setState(() {
+                    _rememberMe = val ?? false;
+                  });
+                },
+              ),
+            ),
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTap: () {
+                setState(() {
+                  _rememberMe = !_rememberMe;
+                });
+              },
+              child: Text(
+                '记住账号',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: theme.textTheme.bodyMedium?.color,
+                ),
+              ),
+            ),
+          ],
+        ),
+
         const SizedBox(height: 24),
 
         if (_errorMessage != null)
@@ -246,12 +342,41 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                 )
               : const Text(
-                  'Login Account',
+                  '登 录', // 汉化
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
+        ),
+
+        const SizedBox(height: 24),
+
+        // 注册 & 找回密码
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            TextButton(
+              onPressed: () => _launchUrl(
+                  'https://example.com/register'), // TODO: Replace with real URL
+              child: Text(
+                '注册账号',
+                style: TextStyle(color: linkColor),
+              ),
+            ),
+            Text(
+              '|',
+              style: TextStyle(color: theme.dividerColor),
+            ),
+            TextButton(
+              onPressed: () => _launchUrl(
+                  'https://example.com/password/reset'), // TODO: Replace with real URL
+              child: Text(
+                '找回密码',
+                style: TextStyle(color: linkColor),
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -264,6 +389,8 @@ class _LoginInput extends StatelessWidget {
   final IconData icon;
   final bool isPassword;
   final String hint;
+  final bool obscureText;
+  final Widget? suffixIcon;
 
   const _LoginInput({
     required this.controller,
@@ -271,6 +398,8 @@ class _LoginInput extends StatelessWidget {
     required this.icon,
     this.isPassword = false,
     required this.hint,
+    this.obscureText = false,
+    this.suffixIcon,
   });
 
   @override
@@ -298,7 +427,7 @@ class _LoginInput extends StatelessWidget {
           ),
           child: TextField(
             controller: controller,
-            obscureText: isPassword,
+            obscureText: isPassword ? obscureText : false,
             style: TextStyle(color: theme.textTheme.bodyMedium?.color),
             decoration: InputDecoration(
               hintText: hint,
@@ -308,6 +437,7 @@ class _LoginInput extends StatelessWidget {
                 size: 18,
                 color: theme.textTheme.bodySmall?.color,
               ),
+              suffixIcon: suffixIcon,
               border: InputBorder.none,
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 16,
