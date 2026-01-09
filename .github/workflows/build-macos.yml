@@ -29,6 +29,18 @@ jobs:
       - name: Get Flutter dependencies
         run: flutter pub get
       
+      - name: Download Sing-box core for macOS
+        run: |
+          mkdir -p assets/core
+          # Download latest sing-box for macOS
+          LATEST_VERSION=$(curl -s https://api.github.com/repos/SagerNet/sing-box/releases/latest | grep '"tag_name"' | sed -E 's/.*"v([^"]+)".*/\1/')
+          echo "Downloading sing-box v${LATEST_VERSION} for macOS..."
+          curl -L "https://github.com/SagerNet/sing-box/releases/download/v${LATEST_VERSION}/sing-box-${LATEST_VERSION}-darwin-amd64.tar.gz" -o singbox.tar.gz
+          tar -xzf singbox.tar.gz
+          mv sing-box-*/sing-box assets/core/
+          chmod +x assets/core/sing-box
+          rm -rf singbox.tar.gz sing-box-*
+      
       - name: Build macOS Release
         run: flutter build macos --release
       

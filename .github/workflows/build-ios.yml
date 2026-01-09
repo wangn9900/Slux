@@ -29,6 +29,60 @@ jobs:
       - name: Get Flutter dependencies
         run: flutter pub get
       
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+      
+      - name: Build libbox.framework for iOS
+        run: |
+          mkdir -p core/mobile
+          cat > core/mobile/main.go << 'EOF'
+          package main
+          import "C"
+          import (
+              "context"
+              "encoding/json"
+              box "github.com/sagernet/sing-box"
+              "github.com/sagernet/sing-box/option"
+          )
+          var instance *box.Box
+          var ctx context.Context
+          var cancel context.CancelFunc
+          //export start
+          func start(configContent *C.char) *C.char {
+              configJson := C.GoString(configContent)
+              var options option.Options
+              if err := json.Unmarshal([]byte(configJson), &options); err != nil {
+                  return C.CString("Config Parse Error: " + err.Error())
+              }
+              ctx, cancel = context.WithCancel(context.Background())
+              var err error
+              instance, err = box.New(box.Options{Context: ctx, Options: options})
+              if err != nil {
+                  return C.CString("Create Box Error: " + err.Error())
+              }
+              if err := instance.Start(); err != nil {
+                  return C.CString("Start Error: " + err.Error())
+              }
+              return nil
+          }
+          //export stop
+          func stop() {
+              if cancel != nil { cancel() }
+              if instance != nil { instance.Close(); instance = nil }
+          }
+          func main() {}
+          EOF
+          cd core/mobile
+          go mod init libbox
+          go get github.com/sagernet/sing-box@latest
+          go mod tidy
+          # Build for iOS arm64
+          CGO_ENABLED=1 GOOS=ios GOARCH=arm64 \
+          go build -buildmode=c-archive -trimpath -ldflags="-s -w" -o libbox.a main.go
+          # Note: Full framework creation requires xcrun, skipping for now
+      
       - name: Build iOS (No Codesign)
         run: flutter build ios --release --no-codesign
       
