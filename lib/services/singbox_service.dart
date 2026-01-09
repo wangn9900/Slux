@@ -179,5 +179,10 @@ class MobileSingboxService implements ISingboxService {
   Future<void> stop() async {
     LibBox.stop();
     _isRunning = false;
+
+    // Android 需要停止 VPN Service
+    if (Platform.isAndroid) {
+      await VpnManager.stopVpn();
+    }
   }
 }
