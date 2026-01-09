@@ -215,9 +215,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    // 背景色：亮色模式下使用浅灰，深色模式下使用深灰/黑等
+    // 背景色：亮色模式下使用 Color(0xFFEEF2F6) (Blue Gray 50)，增加对比度
     final backgroundColor =
-        isDark ? const Color(0xFF0B0F19) : const Color(0xFFF8FAFC);
+        isDark ? const Color(0xFF0B0F19) : const Color(0xFFEEF2F6);
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -235,7 +235,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 32, vertical: 32),
                   decoration: BoxDecoration(
-                    color: theme.cardColor,
+                    // 显式白色背景，确保在浅灰背景上突出
+                    color: isDark ? const Color(0xFF1E293B) : Colors.white,
                     borderRadius: BorderRadius.circular(24),
                     boxShadow: [
                       BoxShadow(
@@ -325,7 +326,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         // Email
         _LoginInput(
           controller: _emailController,
-          label: '邮箱账号', // 汉化
+          label: '邮箱账号',
           icon: LucideIcons.mail,
           hint: 'user@example.com',
         ),
@@ -368,7 +369,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         // Password
         _LoginInput(
           controller: _passwordController,
-          label: _mode == LoginMode.forgotPassword ? '新密码' : '密码', // 汉化
+          label: _mode == LoginMode.forgotPassword ? '新密码' : '密码',
           icon: LucideIcons.lock,
           isPassword: true,
           obscureText: !_showPassword,
