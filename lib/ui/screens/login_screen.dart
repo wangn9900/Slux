@@ -62,157 +62,198 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    return Scaffold(
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          if (constraints.maxWidth > 800) {
+            return _buildDesktopLayout();
+          } else {
+            return _buildMobileLayout();
+          }
+        },
+      ),
+    );
+  }
+
+  Widget _buildDesktopLayout() {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return Scaffold(
-      body: Row(
-        children: [
-          // Left Side - Branding / Graphic
-          Expanded(
-            flex: 3,
-            child: Container(
-              color: isDark ? const Color(0xFF0B0F19) : const Color(0xFFF1F5F9),
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      width: 80,
-                      height: 80,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF3B82F6), Color(0xFF8B5CF6)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF3B82F6).withOpacity(0.3),
-                            blurRadius: 20,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(
-                        LucideIcons.zap,
-                        size: 40,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      'Welcome to SLux',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: theme
-                            .textTheme
-                            .displayLarge
-                            ?.color, // Use theme color
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Your Premium Gateway to the World',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: theme.textTheme.bodyMedium?.color?.withOpacity(
-                          0.6,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+    return Row(
+      children: [
+        // Left Side - Branding / Graphic
+        Expanded(
+          flex: 3,
+          child: Container(
+            color: isDark ? const Color(0xFF0B0F19) : const Color(0xFFF1F5F9),
+            child: _buildBrandingContent(isMobile: false),
+          ),
+        ),
+
+        // Right Side - Login Form
+        Expanded(
+          flex: 2,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 48),
+            color: theme.cardColor,
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 400),
+                child: _buildLoginForm(),
               ),
             ),
           ),
+        ),
+      ],
+    );
+  }
 
-          // Right Side - Login Form
-          Expanded(
-            flex: 2,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 48),
-              color: theme.cardColor, // Use theme card color or surface
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    'Sign In',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: theme.textTheme.bodyMedium?.color,
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-
-                  // Email Input
-                  _LoginInput(
-                    controller: _emailController,
-                    label: 'Email',
-                    icon: LucideIcons.mail,
-                    hint: 'user@example.com',
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Password Input
-                  _LoginInput(
-                    controller: _passwordController,
-                    label: 'Password',
-                    icon: LucideIcons.lock,
-                    isPassword: true,
-                    hint: '••••••••',
-                  ),
-                  const SizedBox(height: 24),
-
-                  if (_errorMessage != null)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: Text(
-                        _errorMessage!,
-                        style: const TextStyle(color: Colors.red, fontSize: 13),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-
-                  // Login Button
-                  ElevatedButton(
-                    onPressed: _isLoading ? null : _handleLogin,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: theme.colorScheme.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 20),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 0,
-                    ),
-                    child: _isLoading
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : const Text(
-                            'Login Account',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
+  Widget _buildMobileLayout() {
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          children: [
+            const SizedBox(height: 60),
+            _buildBrandingContent(isMobile: true),
+            const SizedBox(height: 48),
+            _buildLoginForm(),
+            const SizedBox(height: 40),
+          ],
+        ),
       ),
+    );
+  }
+
+  Widget _buildBrandingContent({required bool isMobile}) {
+    final theme = Theme.of(context);
+
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Container(
+          width: isMobile ? 64 : 80,
+          height: isMobile ? 64 : 80,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF3B82F6), Color(0xFF8B5CF6)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(isMobile ? 16 : 20),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF3B82F6).withOpacity(0.3),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Icon(
+            LucideIcons.zap,
+            size: isMobile ? 32 : 40,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 24),
+        Text(
+          'Welcome to SLux',
+          style: TextStyle(
+            fontSize: isMobile ? 24 : 28,
+            fontWeight: FontWeight.bold,
+            color: theme.textTheme.displayLarge?.color,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Your Premium Gateway to the World',
+          style: TextStyle(
+            fontSize: isMobile ? 14 : 16,
+            color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6),
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLoginForm() {
+    final theme = Theme.of(context);
+
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'Sign In',
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: theme.textTheme.bodyMedium?.color,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 32),
+
+        // Email Input
+        _LoginInput(
+          controller: _emailController,
+          label: 'Email',
+          icon: LucideIcons.mail,
+          hint: 'user@example.com',
+        ),
+        const SizedBox(height: 16),
+
+        // Password Input
+        _LoginInput(
+          controller: _passwordController,
+          label: 'Password',
+          icon: LucideIcons.lock,
+          isPassword: true,
+          hint: '••••••••',
+        ),
+        const SizedBox(height: 24),
+
+        if (_errorMessage != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: Text(
+              _errorMessage!,
+              style: const TextStyle(color: Colors.red, fontSize: 13),
+              textAlign: TextAlign.center,
+            ),
+          ),
+
+        // Login Button
+        ElevatedButton(
+          onPressed: _isLoading ? null : _handleLogin,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: theme.colorScheme.primary,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            elevation: 0,
+          ),
+          child: _isLoading
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2,
+                  ),
+                )
+              : const Text(
+                  'Login Account',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+        ),
+      ],
     );
   }
 }
