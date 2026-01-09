@@ -1,0 +1,49 @@
+name: Build Windows
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'lib/**'
+      - 'windows/**'
+      - 'pubspec.yaml'
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    name: Build Windows EXE
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.27.1'
+          channel: 'stable'
+      
+      - name: Get Flutter dependencies
+        run: flutter pub get
+      
+      - name: Download Sing-box core
+        run: |
+          ./scripts/download_core.ps1
+        shell: powershell
+      
+      - name: Build Windows Release
+        run: flutter build windows --release
+      
+      - name: Package Windows App
+        run: |
+          Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath slux-windows-x64.zip
+        shell: powershell
+      
+      - name: Upload Windows Build
+        uses: actions/upload-artifact@v4
+        with:
+          name: slux-windows-x64
+          path: slux-windows-x64.zip

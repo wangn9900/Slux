@@ -1,0 +1,45 @@
+name: Build macOS
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'lib/**'
+      - 'macos/**'
+      - 'pubspec.yaml'
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-macos:
+    name: Build macOS App
+    runs-on: macos-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.27.1'
+          channel: 'stable'
+      
+      - name: Get Flutter dependencies
+        run: flutter pub get
+      
+      - name: Build macOS Release
+        run: flutter build macos --release
+      
+      - name: Package macOS App
+        run: |
+          cd build/macos/Build/Products/Release
+          zip -r slux-macos.zip slux.app
+          mv slux-macos.zip ../../../../../
+      
+      - name: Upload macOS Build
+        uses: actions/upload-artifact@v4
+        with:
+          name: slux-macos
+          path: slux-macos.zip
