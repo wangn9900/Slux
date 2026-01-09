@@ -1,0 +1,168 @@
+name: Build Android with libbox
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-libbox:
+    name: Build libbox.so
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+      
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r26c
+          add-to-path: true
+      
+      - name: Create Go wrapper directory
+        run: mkdir -p core/mobile
+      
+      - name: Create Go wrapper (main.go)
+        run: |
+          cat > core/mobile/main.go << 'EOF'
+          package main
+
+          import "C"
+          import (
+              "context"
+              "encoding/json"
+              
+              box "github.com/sagernet/sing-box"
+              "github.com/sagernet/sing-box/option"
+          )
+
+          var instance *box.Box
+          var ctx context.Context
+          var cancel context.CancelFunc
+
+          //export start
+          func start(configContent *C.char) *C.char {
+              configJson := C.GoString(configContent)
+              
+              // Parse config
+              var options option.Options
+              if err := json.Unmarshal([]byte(configJson), &options); err != nil {
+                  return C.CString("Config Parse Error: " + err.Error())
+              }
+
+              // Create Box instance
+              ctx, cancel = context.WithCancel(context.Background())
+              var err error
+              instance, err = box.New(box.Options{
+                  Context: ctx,
+                  Options: options,
+              })
+              if err != nil {
+                  return C.CString("Create Box Error: " + err.Error())
+              }
+
+              // Start
+              if err := instance.Start(); err != nil {
+                  return C.CString("Start Error: " + err.Error())
+              }
+
+              return nil // Success
+          }
+
+          //export stop
+          func stop() {
+              if cancel != nil {
+                  cancel()
+              }
+              if instance != nil {
+                  instance.Close()
+                  instance = nil
+              }
+          }
+
+          func main() {}
+          EOF
+      
+      - name: Initialize Go module
+        working-directory: core/mobile
+        run: |
+          go mod init libbox
+          go get github.com/sagernet/sing-box@latest
+          go mod tidy
+      
+      - name: Build libbox.so for arm64-v8a
+        working-directory: core/mobile
+        env:
+          ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
+        run: |
+          export CC=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android29-clang
+          CGO_ENABLED=1 GOOS=android GOARCH=arm64 \
+          go build -buildmode=c-shared -trimpath -ldflags="-s -w" -o libbox.so main.go
+      
+      - name: Build libbox.so for armeabi-v7a
+        working-directory: core/mobile
+        env:
+          ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
+        run: |
+          export CC=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi29-clang
+          CGO_ENABLED=1 GOOS=android GOARCH=arm GOARM=7 \
+          go build -buildmode=c-shared -trimpath -ldflags="-s -w" -o libbox-armeabi-v7a.so main.go
+      
+      - name: Build libbox.so for x86_64
+        working-directory: core/mobile
+        env:
+          ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
+        run: |
+          export CC=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android29-clang
+          CGO_ENABLED=1 GOOS=android GOARCH=amd64 \
+          go build -buildmode=c-shared -trimpath -ldflags="-s -w" -o libbox-x86_64.so main.go
+      
+      - name: Copy to jniLibs
+        run: |
+          mkdir -p android/app/src/main/jniLibs/arm64-v8a
+          mkdir -p android/app/src/main/jniLibs/armeabi-v7a
+          mkdir -p android/app/src/main/jniLibs/x86_64
+          cp core/mobile/libbox.so android/app/src/main/jniLibs/arm64-v8a/
+          cp core/mobile/libbox-armeabi-v7a.so android/app/src/main/jniLibs/armeabi-v7a/libbox.so
+          cp core/mobile/libbox-x86_64.so android/app/src/main/jniLibs/x86_64/libbox.so
+      
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+      
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.27.1'
+          channel: 'stable'
+      
+      - name: Get Flutter dependencies
+        run: flutter pub get
+      
+      - name: Build Android APK
+        run: flutter build apk --release
+      
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: slux-android-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+      
+      - name: Upload libbox.so artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: libbox-libraries
+          path: |
+            android/app/src/main/jniLibs/arm64-v8a/libbox.so
+            android/app/src/main/jniLibs/armeabi-v7a/libbox.so
+            android/app/src/main/jniLibs/x86_64/libbox.so
