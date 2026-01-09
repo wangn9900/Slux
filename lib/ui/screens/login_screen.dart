@@ -188,10 +188,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
+  // 标题根据模式变化，如果是登录模式，且已经有了Logo，这里可以简化或者不需要
+  // 但为了保留“账号登录”这个明确指示，我们还是保留，但可能会调整位置
   String get _title {
     switch (_mode) {
       case LoginMode.login:
-        return '账号登录';
+        return '账号登录'; // 会显示在 Logo 下方
       case LoginMode.register:
         return '注册新账号';
       case LoginMode.forgotPassword:
@@ -215,7 +217,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    // 背景色：亮色模式下使用 Color(0xFFEEF2F6) (Blue Gray 50)，增加对比度
     final backgroundColor =
         isDark ? const Color(0xFF0B0F19) : const Color(0xFFEEF2F6);
 
@@ -223,32 +224,31 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       backgroundColor: backgroundColor,
       body: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
+          padding: const EdgeInsets.symmetric(
+              horizontal: 20.0, vertical: 20.0), // 减少外部 padding
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 400),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildBrandingContent(), // Logo区域
-                const SizedBox(height: 32),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 32, vertical: 32),
-                  decoration: BoxDecoration(
-                    // 显式白色背景，确保在浅灰背景上突出
-                    color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 40,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
+            constraints: const BoxConstraints(maxWidth: 380), // 略微减小宽度，更显精致
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(32, 40, 32, 32), // 内部 padding
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.08), // 少し強め
+                    blurRadius: 24,
+                    offset: const Offset(0, 8),
                   ),
-                  child: _buildForm(),
-                ),
-              ],
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min, // 紧凑布局
+                children: [
+                  _buildHeader(), // Logo + Title
+                  const SizedBox(height: 24),
+                  _buildFormContent(), // Inputs + Button
+                ],
+              ),
             ),
           ),
         ),
@@ -256,73 +256,55 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
-  Widget _buildBrandingContent() {
+  Widget _buildHeader() {
     final theme = Theme.of(context);
     return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
       children: [
+        // Compact Logo
         Container(
-          width: 72,
-          height: 72,
+          width: 56, // 缩小尺寸
+          height: 56,
           decoration: BoxDecoration(
             gradient: const LinearGradient(
               colors: [Color(0xFF3B82F6), Color(0xFF8B5CF6)],
             ),
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
                 color: const Color(0xFF3B82F6).withOpacity(0.3),
-                blurRadius: 16,
-                offset: const Offset(0, 8),
+                blurRadius: 12,
+                offset: const Offset(0, 6),
               ),
             ],
           ),
           child: const Icon(
             LucideIcons.zap,
-            size: 36,
+            size: 28, // 缩小图标
             color: Colors.white,
           ),
         ),
         const SizedBox(height: 16),
+        // Title text
         Text(
-          'Welcome to SLux',
+          _title,
           style: TextStyle(
-            fontSize: 24,
+            fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: theme.textTheme.displayLarge?.color,
+            color: theme.textTheme.titleLarge?.color,
+            letterSpacing: 0.5,
           ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'Your Premium Gateway to the World',
-          style: TextStyle(
-            fontSize: 14,
-            color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6),
-          ),
-          textAlign: TextAlign.center,
         ),
       ],
     );
   }
 
-  Widget _buildForm() {
+  Widget _buildFormContent() {
     final theme = Theme.of(context);
     final linkColor = theme.colorScheme.primary;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          _title,
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: theme.textTheme.bodyMedium?.color,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 24),
-
         // Email
         _LoginInput(
           controller: _emailController,
@@ -580,8 +562,9 @@ class _LoginInput extends StatelessWidget {
             color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7),
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6), // 减小间距
         Container(
+          height: 48, // 明确高度，确保紧凑
           decoration: BoxDecoration(
             color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
             borderRadius: BorderRadius.circular(12),
@@ -604,9 +587,10 @@ class _LoginInput extends StatelessWidget {
               border: InputBorder.none,
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 16,
-                vertical: 14,
+                vertical: 0, // 利用各行垂直居中
               ),
             ),
+            textAlignVertical: TextAlignVertical.center, // 确保文字居中
           ),
         ),
       ],

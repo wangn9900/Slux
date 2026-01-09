@@ -30,8 +30,9 @@ void main() async {
     await SystemProxyHelper.clearSystemProxy();
 
     WindowOptions windowOptions = const WindowOptions(
-      size: Size(900, 650),
-      minimumSize: Size(750, 550),
+      size: Size(750, 580),
+      minimumSize: Size(
+          400, 600), // Mobile width, taller height to accommodate login flow
       center: true,
       backgroundColor: Colors.transparent,
       skipTaskbar: false,
