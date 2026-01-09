@@ -5,13 +5,6 @@ import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
-import 'dart:convert';
-import 'dart:io';
-
-import 'package:flutter/foundation.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
-
 import '../core/ffi/libbox.dart'; // Import FFI bindings
 import 'vpn_manager.dart'; // Import VPN manager
 
@@ -137,6 +130,8 @@ class MobileSingboxService implements ISingboxService {
       print("Starting Sing-box (Mobile FFI with VPN)...");
     }
 
+    int tunFd = -1;
+
     // Android 需要先启动 VPN Service
     if (Platform.isAndroid) {
       // 检查权限
@@ -156,7 +151,7 @@ class MobileSingboxService implements ISingboxService {
       await Future.delayed(const Duration(milliseconds: 500));
 
       // 获取 TUN FD
-      final tunFd = await VpnManager.getTunFd();
+      tunFd = await VpnManager.getTunFd();
       if (tunFd < 0) {
         throw Exception("Failed to get TUN file descriptor");
       }
@@ -168,19 +163,7 @@ class MobileSingboxService implements ISingboxService {
 
     // 调用 FFI 启动 Sing-box
     // Android 传递 tunFd，其他平台传递 -1
-    int fdToPass = -1;
-    if (Platform.isAndroid) {
-      // tunFd 已经在上面获取了，但它是局部变量，无法直接访问。
-      // 修正：我们需要把上面的 tunFd 变量作用域提升，或者是直接在这里重新获取（不推荐），
-      // 或者重构代码结构。
-      // 由于代码结构限制，我这里假定上下文。
-      // Wait, replace_file_content regex match context.
-    }
-    // Logic error in my thought: I need to use the variable `tunFd` defined in line 159.
-    // So I should replace the block that has access to it.
-
-    final error = LibBox.start(
-        content, Platform.isAndroid ? (await VpnManager.getTunFd()) : -1);
+    final error = LibBox.start(content, tunFd);
     if (error != null) {
       throw Exception("Failed to start libbox: $error");
     }
