@@ -177,9 +177,10 @@ class _ProfilesScreenState extends ConsumerState<ProfilesScreen> {
 
   Widget _buildHeaderCard(BuildContext context) {
     final theme = Theme.of(context);
-    final total = (_userInfo?['transfer_enable'] ?? 0);
-    final u = (_userInfo?['u'] ?? 0);
-    final d = (_userInfo?['d'] ?? 0);
+    final total =
+        int.tryParse(_userInfo?['transfer_enable']?.toString() ?? '0') ?? 0;
+    final u = int.tryParse(_userInfo?['u']?.toString() ?? '0') ?? 0;
+    final d = int.tryParse(_userInfo?['d']?.toString() ?? '0') ?? 0;
     final used = u + d;
     final progress = total > 0 ? (used / total).clamp(0.0, 1.0) : 0.0;
 
@@ -291,9 +292,8 @@ class _ProfilesScreenState extends ConsumerState<ProfilesScreen> {
                   value: progress,
                   minHeight: 12,
                   backgroundColor: theme.colorScheme.surfaceContainerHighest,
-                  color: progress > 0.9
-                      ? Colors.red
-                      : theme.colorScheme.primary,
+                  color:
+                      progress > 0.9 ? Colors.red : theme.colorScheme.primary,
                 ),
               ),
             ],
