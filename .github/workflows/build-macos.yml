@@ -7,6 +7,7 @@ on:
       - 'lib/**'
       - 'macos/**'
       - 'pubspec.yaml'
+      - '.github/workflows/build-macos.yml'
   pull_request:
     branches: [ main ]
   workflow_dispatch:
