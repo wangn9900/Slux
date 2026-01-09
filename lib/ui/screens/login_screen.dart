@@ -1,10 +1,12 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../providers/v2board_provider.dart';
+
+enum LoginMode { login, register, forgotPassword }
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -14,20 +16,41 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
+  LoginMode _mode = LoginMode.login;
+
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _verifyCodeController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+  final _inviteCodeController = TextEditingController();
 
   bool _isLoading = false;
   String? _errorMessage;
 
-  // 新增状态
+  // 状态
   bool _rememberMe = true;
   bool _showPassword = false;
+  bool _showConfirmPassword = false;
+
+  // 验证码倒计时
+  int _countdown = 0;
+  Timer? _timer;
 
   @override
   void initState() {
     super.initState();
     _loadSavedCredentials();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _verifyCodeController.dispose();
+    _confirmPasswordController.dispose();
+    _inviteCodeController.dispose();
+    super.dispose();
   }
 
   // 加载保存的账号
@@ -54,137 +77,197 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
-  Future<void> _launchUrl(String urlString) async {
-    final Uri url = Uri.parse(urlString);
-    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('无法打开链接: $urlString')),
-        );
+  void _startCountdown() {
+    setState(() {
+      _countdown = 60;
+    });
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_countdown > 0) {
+        setState(() {
+          _countdown--;
+        });
+      } else {
+        timer.cancel();
       }
+    });
+  }
+
+  Future<void> _handleSendVerifyCode() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty) {
+      setState(() => _errorMessage = "请输入邮箱地址");
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final success =
+          await ref.read(v2boardServiceProvider).sendEmailVerify(email);
+      if (success) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('验证码已发送，请检查邮箱')),
+          );
+          _startCountdown();
+        }
+      } else {
+        setState(() => _errorMessage = "验证码发送失败");
+      }
+    } catch (e) {
+      setState(
+          () => _errorMessage = e.toString().replaceAll("Exception: ", ""));
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  Future<void> _handleLogin() async {
+  Future<void> _handleSubmit() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
     final v2board = ref.read(v2boardServiceProvider);
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
 
     try {
-      final loginResp = await v2board.login(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-      );
-
-      if (loginResp != null) {
-        // 登录成功
-        await _saveCredentials(); // 保存账号
-
-        if (mounted) {
-          context.go('/');
+      if (_mode == LoginMode.login) {
+        final loginResp = await v2board.login(email: email, password: password);
+        if (loginResp != null) {
+          await _saveCredentials();
+          if (mounted) context.go('/');
+        } else {
+          setState(() => _errorMessage = "登录失败，请检查账号密码");
         }
-      } else {
-        setState(() {
-          _errorMessage = "登录失败，请检查账号密码或网络连接";
-        });
+      } else if (_mode == LoginMode.register) {
+        if (password != _confirmPasswordController.text) {
+          throw Exception("两次输入的密码不一致");
+        }
+        final resp = await v2board.register(
+          email: email,
+          password: password,
+          verifyCode: _verifyCodeController.text.trim(),
+          inviteCode: _inviteCodeController.text.trim(),
+        );
+        if (resp != null) {
+          await _saveCredentials();
+          if (mounted) context.go('/');
+        } else {
+          setState(() => _errorMessage = "注册失败");
+        }
+      } else if (_mode == LoginMode.forgotPassword) {
+        final success = await v2board.forgetPassword(
+          email: email,
+          password: password, // user sets new password here
+          verifyCode: _verifyCodeController.text.trim(),
+        );
+        if (success) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('密码重置成功，请登录')),
+            );
+            setState(() {
+              _mode = LoginMode.login;
+              _passwordController.clear();
+            });
+          }
+        } else {
+          setState(() => _errorMessage = "重置失败，请检查验证码");
+        }
       }
     } catch (e) {
-      setState(() {
-        _errorMessage = e.toString().replaceAll("Exception: ", "");
-      });
+      setState(
+          () => _errorMessage = e.toString().replaceAll("Exception: ", ""));
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  String get _title {
+    switch (_mode) {
+      case LoginMode.login:
+        return '账号登录';
+      case LoginMode.register:
+        return '注册新账号';
+      case LoginMode.forgotPassword:
+        return '重置密码';
+    }
+  }
+
+  String get _buttonText {
+    switch (_mode) {
+      case LoginMode.login:
+        return '登 录';
+      case LoginMode.register:
+        return '注 册';
+      case LoginMode.forgotPassword:
+        return '重置密码';
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          if (constraints.maxWidth > 800) {
-            return _buildDesktopLayout();
-          } else {
-            return _buildMobileLayout();
-          }
-        },
-      ),
-    );
-  }
-
-  Widget _buildDesktopLayout() {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return Row(
-      children: [
-        // Left Side - Branding / Graphic
-        Expanded(
-          flex: 3,
-          child: Container(
-            color: isDark ? const Color(0xFF0B0F19) : const Color(0xFFF1F5F9),
-            child: _buildBrandingContent(isMobile: false),
-          ),
-        ),
+    // 背景色：亮色模式下使用浅灰，深色模式下使用深灰/黑，避免纯白太刺眼
+    final backgroundColor =
+        isDark ? const Color(0xFF0B0F19) : const Color(0xFFF8FAFC);
 
-        // Right Side - Login Form
-        Expanded(
-          flex: 2,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 48),
-            color: theme.cardColor,
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 400),
-                child: _buildLoginForm(),
-              ),
+    return Scaffold(
+      backgroundColor: backgroundColor,
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildBrandingContent(),
+                const SizedBox(height: 48),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
+                  decoration: BoxDecoration(
+                    color: theme.cardColor,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 40,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: _buildForm(),
+                ),
+              ],
             ),
           ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildMobileLayout() {
-    return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          children: [
-            const SizedBox(height: 60),
-            _buildBrandingContent(isMobile: true),
-            const SizedBox(height: 48),
-            _buildLoginForm(),
-            const SizedBox(height: 40),
-          ],
         ),
       ),
     );
   }
 
-  Widget _buildBrandingContent({required bool isMobile}) {
+  Widget _buildBrandingContent() {
     final theme = Theme.of(context);
-
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Container(
-          width: isMobile ? 64 : 80,
-          height: isMobile ? 64 : 80,
+          width: 80,
+          height: 80,
           decoration: BoxDecoration(
             gradient: const LinearGradient(
               colors: [Color(0xFF3B82F6), Color(0xFF8B5CF6)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
             ),
-            borderRadius: BorderRadius.circular(isMobile ? 16 : 20),
+            borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
                 color: const Color(0xFF3B82F6).withOpacity(0.3),
@@ -193,9 +276,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
             ],
           ),
-          child: Icon(
+          child: const Icon(
             LucideIcons.zap,
-            size: isMobile ? 32 : 40,
+            size: 40,
             color: Colors.white,
           ),
         ),
@@ -203,7 +286,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         Text(
           'Welcome to SLux',
           style: TextStyle(
-            fontSize: isMobile ? 24 : 28,
+            fontSize: 28,
             fontWeight: FontWeight.bold,
             color: theme.textTheme.displayLarge?.color,
           ),
@@ -212,7 +295,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         Text(
           'Your Premium Gateway to the World',
           style: TextStyle(
-            fontSize: isMobile ? 14 : 16,
+            fontSize: 16,
             color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6),
           ),
           textAlign: TextAlign.center,
@@ -221,16 +304,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
-  Widget _buildLoginForm() {
+  Widget _buildForm() {
     final theme = Theme.of(context);
     final linkColor = theme.colorScheme.primary;
 
     return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          '账号登录', // 汉化
+          _title,
           style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
@@ -240,73 +322,118 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         ),
         const SizedBox(height: 32),
 
-        // Email Input
+        // Email
         _LoginInput(
           controller: _emailController,
-          label: '邮箱账号', // 汉化
+          label: '邮箱账号',
           icon: LucideIcons.mail,
           hint: 'user@example.com',
         ),
         const SizedBox(height: 16),
 
-        // Password Input
+        // Verify Code Area (Register/Forgot)
+        if (_mode != LoginMode.login) ...[
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: _LoginInput(
+                  controller: _verifyCodeController,
+                  label: '验证码',
+                  icon: LucideIcons.shieldCheck,
+                  hint: 'Email 验证码',
+                ),
+              ),
+              const SizedBox(width: 12),
+              SizedBox(
+                height: 50, // Match input height ish
+                child: OutlinedButton(
+                  onPressed: (_countdown > 0 || _isLoading)
+                      ? null
+                      : _handleSendVerifyCode,
+                  style: OutlinedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    side: BorderSide(color: theme.dividerColor),
+                  ),
+                  child: Text(_countdown > 0 ? '${_countdown}s' : '发送验证码'),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+        ],
+
+        // Password
         _LoginInput(
           controller: _passwordController,
-          label: '密码', // 汉化
+          label: _mode == LoginMode.forgotPassword ? '新密码' : '密码',
           icon: LucideIcons.lock,
           isPassword: true,
           obscureText: !_showPassword,
           hint: '请输入密码',
           suffixIcon: IconButton(
-            icon: Icon(
-              _showPassword ? LucideIcons.eye : LucideIcons.eyeOff,
-              size: 18,
-              color: theme.textTheme.bodySmall?.color,
-            ),
-            onPressed: () {
-              setState(() {
-                _showPassword = !_showPassword;
-              });
-            },
+            icon: Icon(_showPassword ? LucideIcons.eye : LucideIcons.eyeOff,
+                size: 18),
+            onPressed: () => setState(() => _showPassword = !_showPassword),
           ),
         ),
         const SizedBox(height: 16),
 
-        // 记住账号 Checkbox
-        Row(
-          children: [
-            SizedBox(
-              height: 24,
-              width: 24,
-              child: Checkbox(
-                value: _rememberMe,
-                activeColor: theme.colorScheme.primary,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(4)),
-                onChanged: (val) {
-                  setState(() {
-                    _rememberMe = val ?? false;
-                  });
-                },
-              ),
+        // Confirm Password (Register Only)
+        if (_mode == LoginMode.register) ...[
+          _LoginInput(
+            controller: _confirmPasswordController,
+            label: '确认密码',
+            icon: LucideIcons.lock,
+            isPassword: true,
+            obscureText: !_showConfirmPassword,
+            hint: '请再次输入密码',
+            suffixIcon: IconButton(
+              icon: Icon(
+                  _showConfirmPassword ? LucideIcons.eye : LucideIcons.eyeOff,
+                  size: 18),
+              onPressed: () =>
+                  setState(() => _showConfirmPassword = !_showConfirmPassword),
             ),
-            const SizedBox(width: 8),
-            GestureDetector(
-              onTap: () {
-                setState(() {
-                  _rememberMe = !_rememberMe;
-                });
-              },
-              child: Text(
-                '记住账号',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: theme.textTheme.bodyMedium?.color,
+          ),
+          const SizedBox(height: 16),
+          // Invite Code
+          _LoginInput(
+            controller: _inviteCodeController,
+            label: '邀请码 (可选)',
+            icon: LucideIcons.ticket,
+            hint: '如有邀请码请填写',
+          ),
+          const SizedBox(height: 16),
+        ],
+
+        // Remember Me (Login Only)
+        if (_mode == LoginMode.login)
+          Row(
+            children: [
+              SizedBox(
+                height: 24,
+                width: 24,
+                child: Checkbox(
+                  value: _rememberMe,
+                  activeColor: theme.colorScheme.primary,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(4)),
+                  onChanged: (val) =>
+                      setState(() => _rememberMe = val ?? false),
                 ),
               ),
-            ),
-          ],
-        ),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: () => setState(() => _rememberMe = !_rememberMe),
+                child: Text('记住账号',
+                    style: TextStyle(
+                        fontSize: 14,
+                        color: theme.textTheme.bodyMedium?.color)),
+              ),
+            ],
+          ),
 
         const SizedBox(height: 24),
 
@@ -320,62 +447,58 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
           ),
 
-        // Login Button
+        // Action Button
         ElevatedButton(
-          onPressed: _isLoading ? null : _handleLogin,
+          onPressed: _isLoading ? null : _handleSubmit,
           style: ElevatedButton.styleFrom(
             backgroundColor: theme.colorScheme.primary,
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(vertical: 20),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            elevation: 0,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
           child: _isLoading
               ? const SizedBox(
                   width: 20,
                   height: 20,
                   child: CircularProgressIndicator(
-                    color: Colors.white,
-                    strokeWidth: 2,
-                  ),
-                )
-              : const Text(
-                  '登 录', // 汉化
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+                      color: Colors.white, strokeWidth: 2))
+              : Text(_buttonText,
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.w600)),
         ),
 
         const SizedBox(height: 24),
 
-        // 注册 & 找回密码
+        // Mode Switchers
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            TextButton(
-              onPressed: () => _launchUrl(
-                  'https://example.com/register'), // TODO: Replace with real URL
-              child: Text(
-                '注册账号',
-                style: TextStyle(color: linkColor),
+            if (_mode == LoginMode.login) ...[
+              TextButton(
+                onPressed: () => setState(() {
+                  _mode = LoginMode.register;
+                  _errorMessage = null;
+                }),
+                child: Text('注册账号', style: TextStyle(color: linkColor)),
               ),
-            ),
-            Text(
-              '|',
-              style: TextStyle(color: theme.dividerColor),
-            ),
-            TextButton(
-              onPressed: () => _launchUrl(
-                  'https://example.com/password/reset'), // TODO: Replace with real URL
-              child: Text(
-                '找回密码',
-                style: TextStyle(color: linkColor),
+              Text('|', style: TextStyle(color: theme.dividerColor)),
+              TextButton(
+                onPressed: () => setState(() {
+                  _mode = LoginMode.forgotPassword;
+                  _errorMessage = null;
+                }),
+                child: Text('找回密码', style: TextStyle(color: linkColor)),
               ),
-            ),
+            ] else ...[
+              TextButton(
+                onPressed: () => setState(() {
+                  _mode = LoginMode.login;
+                  _errorMessage = null;
+                }),
+                child: Text('返回登录', style: TextStyle(color: linkColor)),
+              ),
+            ],
           ],
         ),
       ],
@@ -432,17 +555,12 @@ class _LoginInput extends StatelessWidget {
             decoration: InputDecoration(
               hintText: hint,
               hintStyle: TextStyle(color: theme.textTheme.bodySmall?.color),
-              prefixIcon: Icon(
-                icon,
-                size: 18,
-                color: theme.textTheme.bodySmall?.color,
-              ),
+              prefixIcon:
+                  Icon(icon, size: 18, color: theme.textTheme.bodySmall?.color),
               suffixIcon: suffixIcon,
               border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 16,
-              ),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             ),
           ),
         ),

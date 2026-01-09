@@ -94,6 +94,7 @@ class V2BoardService {
     required String email,
     required String password,
   }) async {
+    // ... existing login implementation ...
     final apiBase = await _getWorkingApiBase();
     if (apiBase == null) return null;
     final loginUrl = '$apiBase/api/v1/passport/auth/login';
@@ -113,8 +114,96 @@ class V2BoardService {
       }
     } catch (e) {
       if (kDebugMode) print('V2Board login error: $e');
+      if (e is DioException)
+        throw Exception(
+            e.response?.data['message'] ?? e.message); // Rethrow properly
     }
     return null;
+  }
+
+  // --- Auth Methods (Register & Reset) ---
+
+  Future<bool> sendEmailVerify(String email) async {
+    final apiBase = await _getWorkingApiBase();
+    if (apiBase == null) return false;
+    final url = '$apiBase/api/v1/passport/comm/sendEmailVerify';
+    try {
+      final resp = await _dio.post(
+        url,
+        data: FormData.fromMap({'email': email}),
+      );
+      return resp.statusCode == 200 && resp.data['data'] == true;
+    } catch (e) {
+      if (kDebugMode) print('Error sending email verify: $e');
+      if (e is DioException)
+        throw Exception(e.response?.data['message'] ?? e.message);
+    }
+    return false;
+  }
+
+  Future<V2BoardLoginResponse?> register({
+    required String email,
+    required String password,
+    required String verifyCode,
+    String? inviteCode,
+  }) async {
+    final apiBase = await _getWorkingApiBase();
+    if (apiBase == null) return null;
+    final url = '$apiBase/api/v1/passport/auth/register';
+    try {
+      final data = {
+        'email': email,
+        'password': password,
+        'email_code': verifyCode,
+        if (inviteCode != null && inviteCode.isNotEmpty)
+          'invite_code': inviteCode,
+      };
+      final resp = await _dio.post(url, data: FormData.fromMap(data));
+
+      if (resp.statusCode == 200 && resp.data['data'] != null) {
+        // Register usually returns token similar to login, or just success.
+        // MOMclash handles this by checking auth_data.
+        // Let's assume it returns login data or we need to login manually.
+        // According to MOMclash code: it returns auth_data (token).
+        final loginResp = V2BoardLoginResponse.fromJson(resp.data);
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('v2board_token', loginResp.token);
+        await prefs.setString('v2board_email', loginResp.email);
+        await prefs.setString('v2board_api_base', apiBase);
+        return loginResp;
+      }
+    } catch (e) {
+      if (kDebugMode) print('Error registering: $e');
+      if (e is DioException)
+        throw Exception(e.response?.data['message'] ?? e.message);
+    }
+    return null;
+  }
+
+  Future<bool> forgetPassword({
+    required String email,
+    required String password,
+    required String verifyCode,
+  }) async {
+    final apiBase = await _getWorkingApiBase();
+    if (apiBase == null) return false;
+    final url = '$apiBase/api/v1/passport/auth/forget';
+    try {
+      final resp = await _dio.post(
+        url,
+        data: FormData.fromMap({
+          'email': email,
+          'password': password,
+          'email_code': verifyCode,
+        }),
+      );
+      return resp.statusCode == 200 && resp.data['data'] == true;
+    } catch (e) {
+      if (kDebugMode) print('Error forgetting password: $e');
+      if (e is DioException)
+        throw Exception(e.response?.data['message'] ?? e.message);
+    }
+    return false;
   }
 
   Future<String?> getSubscribeUrl() async {
