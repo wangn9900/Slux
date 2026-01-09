@@ -29,6 +29,26 @@ jobs:
       - name: Get Flutter dependencies
         run: flutter pub get
       
+      - name: Generate app icon
+        run: |
+          # Install ImageMagick
+          choco install imagemagick -y
+          
+          # Create purple lightning icon using ImageMagick
+          magick -size 1024x1024 xc:none -fill "#7C3AED" -draw "roundrectangle 0,0 1024,1024 100,100" `
+            -fill white -font Arial-Bold -pointsize 800 -gravity center -annotate +0+0 "⚡" `
+            temp_icon.png
+          
+          # Convert to ICO with multiple sizes
+          magick convert temp_icon.png -define icon:auto-resize=256,128,96,64,48,32,16 windows/runner/resources/app_icon.ico
+          
+          # Copy to root for tray icon
+          Copy-Item windows/runner/resources/app_icon.ico app_icon.ico
+          
+          # Clean up
+          Remove-Item temp_icon.png
+        shell: powershell
+      
       - name: Download Sing-box core
         run: |
           ./scripts/download_core.ps1
