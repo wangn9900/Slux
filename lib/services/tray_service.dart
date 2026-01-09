@@ -14,15 +14,12 @@ class TrayService {
   TrayService(this.ref);
 
   Future<void> init() async {
-    // 图标路径：默认尝试读取程序目录下的 app_icon.ico
+    // 图标路径：默认尝试读取程序目录下�?app_icon.ico
     // 如果没有，托盘图标可能显示为空白，请确保 .ico 文件存在
     String? iconPath;
     if (Platform.isWindows) {
       final candidates = [
-        'app_icon.ico', // 优先读取运行目录下的自定义图标
-        'windows/runner/resources/app_icon.ico', // 开发环境默认路径
-        'resources/app_icon.ico', // 可能的打包路径
-      ];
+        'app_icon.ico', // 优先读取运行目录下的自定义图�?        'windows/runner/resources/app_icon.ico', // 开发环境默认路�?        'resources/app_icon.ico', // 可能的打包路�?      ];
       for (final path in candidates) {
         if (await File(path).exists()) {
           iconPath = File(path).absolute.path;
@@ -39,8 +36,7 @@ class TrayService {
       iconPath = 'app_icon.ico';
     }
 
-    // 初始化托盘
-    try {
+    // 初始化托�?    try {
       await _systemTray.initSystemTray(title: "Slux", iconPath: iconPath);
     } catch (e) {
       if (kDebugMode) {
@@ -72,19 +68,19 @@ class TrayService {
         },
       ),
       MenuSeparator(),
-      // 常用功能捷径（直接调用 Helper，不涉及 UI 状态）
+      // 常用功能捷径（直接调�?Helper，不涉及 UI 状态）
       MenuItemLabel(
         label: '重置系统代理',
         onClicked: (menuItem) async {
-          await SystemProxyHelper.disableSystemProxy();
+          await SystemProxyHelper.clearSystemProxy();
         },
       ),
       MenuSeparator(),
       MenuItemLabel(
-        label: '退出',
+        label: '退�?,
         onClicked: (menuItem) async {
           // 退出前清理
-          await SystemProxyHelper.disableSystemProxy();
+          await SystemProxyHelper.clearSystemProxy();
           await windowManager.destroy();
         },
       ),

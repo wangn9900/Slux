@@ -94,7 +94,9 @@ jobs:
       - name: Initialize Go module
         working-directory: core/mobile
         run: |
-          go mod init libbox
+          if [ ! -f go.mod ]; then
+            go mod init libbox
+          fi
           go get github.com/sagernet/sing-box@latest
           go mod tidy
       
