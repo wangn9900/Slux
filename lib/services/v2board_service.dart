@@ -881,4 +881,66 @@ class V2BoardService {
     }
     return null;
   }
+
+  /// 获取订阅信息（包含实时流量: u, d, transfer_enable）
+  Future<Map<String, dynamic>?> getSubscriptionData() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('v2board_token');
+    final apiBase =
+        prefs.getString('v2board_api_base') ?? await _getWorkingApiBase();
+
+    if (token == null || apiBase == null) return null;
+    final url = '$apiBase/api/v1/user/getSubscribe';
+
+    try {
+      final resp = await _dio.get(
+        url,
+        options: Options(headers: {'Authorization': token}),
+      );
+      if (resp.statusCode == 200 &&
+          resp.data != null &&
+          resp.data['data'] != null) {
+        return Map<String, dynamic>.from(resp.data['data']);
+      }
+    } catch (e) {
+      if (kDebugMode) print('V2Board getSubscriptionData error: $e');
+    }
+    return null;
+  }
+
+  /// 通过订阅链接 Header 获取流量信息 (Subscription-Userinfo)
+  Future<Map<String, dynamic>?> fetchTrafficFromSubscriptionUrl() async {
+    final subUrl = await getSubscribeUrl();
+    if (subUrl == null) return null;
+    try {
+      Response resp;
+      try {
+        resp = await _dio.head(subUrl);
+      } catch (e) {
+        resp = await _dio.get(subUrl);
+      }
+
+      final header = resp.headers.value('subscription-userinfo');
+      // format: upload=123; download=456; total=789; expire=123456
+      if (header != null) {
+        final data = <String, dynamic>{};
+        final parts = header.split(';');
+        for (final part in parts) {
+          final kv = part.trim().split('=');
+          if (kv.length == 2) {
+            final key = kv[0].trim().toLowerCase();
+            final value = int.tryParse(kv[1].trim()) ?? 0;
+            if (key == 'upload') data['u'] = value;
+            if (key == 'download') data['d'] = value;
+            if (key == 'total') data['transfer_enable'] = value;
+            if (key == 'expire') data['expired_at'] = value;
+          }
+        }
+        if (data.isNotEmpty) return data;
+      }
+    } catch (e) {
+      if (kDebugMode) print('fetchTrafficFromSubscriptionUrl error: $e');
+    }
+    return null;
+  }
 }

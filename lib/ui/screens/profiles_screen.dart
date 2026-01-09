@@ -46,6 +46,8 @@ class _ProfilesScreenState extends ConsumerState<ProfilesScreen> {
         service.getUserInfo(),
         service.getPlans(),
         service.getCommConfig(),
+        service.getSubscriptionData(),
+        service.fetchTrafficFromSubscriptionUrl(),
       ]);
 
       if (mounted) {
@@ -53,6 +55,41 @@ class _ProfilesScreenState extends ConsumerState<ProfilesScreen> {
           _userInfo = results[0] as Map<String, dynamic>?;
           _plans = results[1] as List<dynamic>?;
           _commConfig = results[2] as Map<String, dynamic>?;
+
+          // Merge traffic data: Subscription API > User Info API
+          final subApiData = results[3] as Map<String, dynamic>?;
+          if (_userInfo != null && subApiData != null) {
+            if (subApiData['u'] != null) _userInfo!['u'] = subApiData['u'];
+            if (subApiData['d'] != null) _userInfo!['d'] = subApiData['d'];
+            if (subApiData['transfer_enable'] != null) {
+              _userInfo!['transfer_enable'] = subApiData['transfer_enable'];
+            }
+          }
+
+          // Merge traffic data: Subscription Headers (Most direct) > Subscription API
+          final subHeaderData = results[4] as Map<String, dynamic>?;
+          if (_userInfo != null && subHeaderData != null) {
+            if (subHeaderData['u'] != null)
+              _userInfo!['u'] = subHeaderData['u'];
+            if (subHeaderData['d'] != null)
+              _userInfo!['d'] = subHeaderData['d'];
+            if (subHeaderData['transfer_enable'] != null) {
+              _userInfo!['transfer_enable'] = subHeaderData['transfer_enable'];
+            }
+            if (subHeaderData['expired_at'] != null) {
+              _userInfo!['expired_at'] = subHeaderData['expired_at'];
+            }
+          }
+
+          // Final consistency check for transfer_used
+          if (_userInfo != null) {
+            final u = int.tryParse(_userInfo!['u']?.toString() ?? '0') ?? 0;
+            final d = int.tryParse(_userInfo!['d']?.toString() ?? '0') ?? 0;
+            // Only override transfer_used if we have valid U/D from new sources
+            if (u > 0 || d > 0) {
+              _userInfo!['transfer_used'] = u + d;
+            }
+          }
         });
       }
     } catch (e) {
