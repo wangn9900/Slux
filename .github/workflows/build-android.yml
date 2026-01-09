@@ -57,31 +57,54 @@ jobs:
           func start(configContent *C.char, tunFd C.int) *C.char {
               configJson := C.GoString(configContent)
               
-              var options option.Options
-              if err := json.Unmarshal([]byte(configJson), &options); err != nil {
-                  return C.CString("Config Parse Error: " + err.Error())
+              // 1. Unmarshal to generic map to manipulate JSON fields directly
+              // This avoids direct struct field dependency which causes build errors if API changes
+              var rawConfig map[string]interface{}
+              if err := json.Unmarshal([]byte(configJson), &rawConfig); err != nil {
+                  return C.CString("JSON Map Parse Error: " + err.Error())
               }
 
-              // Apply TUN File Descriptor for Android
+              // 2. Inject TUN File Descriptor
               if tunFd > 0 {
-                  for i := range options.Inbounds {
-                      if options.Inbounds[i].Type == "tun" {
-                          // Inject the file descriptor
-                          options.Inbounds[i].TunOptions.FileDescriptor = int(tunFd)
-                          // Disable auto route/address management since Android VpnService handles it
-                          options.Inbounds[i].TunOptions.AutoRoute = false
-                          // Ensure interface name is empty to force using FD
-                          options.Inbounds[i].TunOptions.InterfaceName = ""
+                  if inbounds, ok := rawConfig["inbounds"].([]interface{}); ok {
+                      for i, ib := range inbounds {
+                          if inbound, ok := ib.(map[string]interface{}); ok {
+                              if t, ok := inbound["type"].(string); ok && t == "tun" {
+                                  // Inject fields recognized by sing-box JSON decoder
+                                  inbound["file_descriptor"] = int(tunFd)
+                                  inbound["auto_route"] = false
+                                  inbound["interface_name"] = ""
+                                  // Save changes
+                                  inbounds[i] = inbound
+                              }
+                          }
                       }
+                      // Save updated inbounds list
+                      rawConfig["inbounds"] = inbounds
                   }
               }
 
+              // 3. Marshal back to bytes
+              newBytes, err := json.Marshal(rawConfig)
+              if err != nil {
+                  return C.CString("JSON Remarshal Error: " + err.Error())
+              }
+
+              // 4. Unmarshal to Typed Options
+              var options option.Options
+              if err := json.Unmarshal(newBytes, &options); err != nil {
+                  return C.CString("Final Config Parse Error: " + err.Error())
+              }
+
               ctx, cancel = context.WithCancel(context.Background())
-              var err error
-              instance, err = box.New(box.Options{
+              var genErr error
+              instance, genErr = box.New(box.Options{
                   Context: ctx,
                   Options: options,
               })
+              if genErr != nil {
+                 return C.CString("Create Box Error: " + genErr.Error())
+              }
               if err != nil {
                   return C.CString("Create Box Error: " + err.Error())
               }
