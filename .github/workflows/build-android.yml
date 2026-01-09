@@ -54,12 +54,26 @@ jobs:
           var cancel context.CancelFunc
 
           //export start
-          func start(configContent *C.char) *C.char {
+          func start(configContent *C.char, tunFd C.int) *C.char {
               configJson := C.GoString(configContent)
               
               var options option.Options
               if err := json.Unmarshal([]byte(configJson), &options); err != nil {
                   return C.CString("Config Parse Error: " + err.Error())
+              }
+
+              // Apply TUN File Descriptor for Android
+              if tunFd > 0 {
+                  for i := range options.Inbounds {
+                      if options.Inbounds[i].Type == "tun" {
+                          // Inject the file descriptor
+                          options.Inbounds[i].TunOptions.FileDescriptor = int(tunFd)
+                          // Disable auto route/address management since Android VpnService handles it
+                          options.Inbounds[i].TunOptions.AutoRoute = false
+                          // Ensure interface name is empty to force using FD
+                          options.Inbounds[i].TunOptions.InterfaceName = ""
+                      }
+                  }
               }
 
               ctx, cancel = context.WithCancel(context.Background())

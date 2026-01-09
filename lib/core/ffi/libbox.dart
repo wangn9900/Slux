@@ -15,8 +15,9 @@ import 'package:ffi/ffi.dart';
   func stop() { ... }
 */
 
-typedef StartFunc = Pointer<Utf8> Function(Pointer<Utf8> configContent);
-typedef Start = Pointer<Utf8> Function(Pointer<Utf8> configContent);
+typedef StartFunc = Pointer<Utf8> Function(
+    Pointer<Utf8> configContent, Int32 tunFd);
+typedef Start = Pointer<Utf8> Function(Pointer<Utf8> configContent, int tunFd);
 
 typedef StopFunc = Void Function();
 typedef Stop = void Function();
@@ -27,33 +28,33 @@ class LibBox {
   static void ensureInitialized() {
     if (_lib != null) return;
 
-    if (Platform.isAndroid) {
-      _lib = DynamicLibrary.open('libbox.so');
-    } else if (Platform.isIOS) {
-      _lib = DynamicLibrary.process(); // iOS usually links statically or framework
-    } else if (Platform.isWindows) {
-       // Windows FFI is possible but we use EXE for now
-       // _lib = DynamicLibrary.open('libbox.dll'); 
+    try {
+      if (Platform.isAndroid) {
+        _lib = DynamicLibrary.open('libbox.so');
+      } else if (Platform.isIOS) {
+        _lib = DynamicLibrary.process();
+      }
+    } catch (e) {
+      print("Failed to load libbox: $e");
     }
   }
 
-  static String? start(String configContent) {
+  static String? start(String configContent, int tunFd) {
     ensureInitialized();
     if (_lib == null) return "Library not loaded";
 
     try {
       final startFunc = _lib!.lookupFunction<StartFunc, Start>('start');
-      
+
       final configC = configContent.toNativeUtf8();
-      final resultC = startFunc(configC);
-      
+      // 在非 Android 平台，tunFd 传入 -1
+      final resultC = startFunc(configC, tunFd);
+
       String? error;
       if (resultC != nullptr) {
         error = resultC.toDartString();
-        // Go 侧分配的字符串通常不需要我们在 Dart 侧释放，或者 Go 侧应该提供 free 函数
-        // 这里假设返回的是 null 表示成功，非 null 表示错误信息
       }
-      
+
       malloc.free(configC);
       return error;
     } catch (e) {

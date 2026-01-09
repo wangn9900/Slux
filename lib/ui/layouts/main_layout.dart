@@ -13,30 +13,101 @@ class MainLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: Container(
-        color: Theme.of(
-          context,
-        ).scaffoldBackgroundColor.withOpacity(0.95), // High opacity background
-        child: Row(
-          children: [
-            // Sidebar
-            const SizedBox(width: 160, child: _Sidebar()),
-            // Main Content
-            Expanded(
-              child: Column(
-                children: [
-                  // Custom Title Bar (Draggable)
-                  const _TitleBar(),
-                  // Page Content
-                  Expanded(child: child),
-                ],
-              ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isMobile = constraints.maxWidth <= 800;
+        final theme = Theme.of(context);
+        final bg = theme.scaffoldBackgroundColor;
+
+        if (isMobile) {
+          return Scaffold(
+            backgroundColor: bg,
+            body: SafeArea(child: child),
+            bottomNavigationBar: const _MobileBottomNav(),
+          );
+        }
+
+        // Desktop Layout
+        return Scaffold(
+          backgroundColor: Colors.transparent,
+          body: Container(
+            color: bg.withOpacity(0.95), // High opacity background
+            child: Row(
+              children: [
+                // Sidebar
+                const SizedBox(width: 160, child: _Sidebar()),
+                // Main Content
+                Expanded(
+                  child: Column(
+                    children: [
+                      // Custom Title Bar (Draggable)
+                      const _TitleBar(),
+                      // Page Content
+                      Expanded(child: child),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _MobileBottomNav extends StatelessWidget {
+  const _MobileBottomNav();
+
+  @override
+  Widget build(BuildContext context) {
+    final GoRouterState state = GoRouterState.of(context);
+    final currentPath = state.uri.toString();
+
+    int getIndex() {
+      if (currentPath == '/') return 0;
+      if (currentPath.startsWith('/proxies')) return 1;
+      if (currentPath.startsWith('/profiles')) return 2;
+      if (currentPath.startsWith('/settings')) return 3;
+      return 0;
+    }
+
+    return NavigationBar(
+      selectedIndex: getIndex(),
+      onDestinationSelected: (index) {
+        switch (index) {
+          case 0:
+            context.go('/');
+            break;
+          case 1:
+            context.go('/proxies');
+            break;
+          case 2:
+            context.go('/profiles');
+            break;
+          case 3:
+            context.go('/settings');
+            break;
+        }
+      },
+      destinations: const [
+        NavigationDestination(
+          icon: Icon(LucideIcons.layoutDashboard),
+          label: '主页',
         ),
-      ),
+        NavigationDestination(
+          icon: Icon(LucideIcons.shoppingBag),
+          label: '商店',
+        ),
+        NavigationDestination(
+          icon: Icon(LucideIcons.user),
+          label: '我的',
+        ),
+        NavigationDestination(
+          icon: Icon(LucideIcons.settings),
+          label: '设置',
+        ),
+      ],
     );
   }
 }
