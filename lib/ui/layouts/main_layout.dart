@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
@@ -45,13 +46,17 @@ class _TitleBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DragToMoveArea(
-      child: Container(
-        height: 32,
-        color: Theme.of(context).scaffoldBackgroundColor, // Match background
-        alignment: Alignment.centerRight,
-      ),
+    final titleBarWidget = Container(
+      height: 32,
+      color: Theme.of(context).scaffoldBackgroundColor, // Match background
+      alignment: Alignment.centerRight,
     );
+
+    // 只在桌面平台使用 DragToMoveArea
+    if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
+      return DragToMoveArea(child: titleBarWidget);
+    }
+    return titleBarWidget;
   }
 }
 

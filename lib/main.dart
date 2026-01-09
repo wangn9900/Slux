@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -20,26 +21,30 @@ import 'services/tray_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await windowManager.ensureInitialized();
 
-  // 启动时强制清理一次系统代理，防止上次非正常退出残�?
-  await SystemProxyHelper.clearSystemProxy();
+  // 只在桌面平台初始化 window_manager
+  if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
+    await windowManager.ensureInitialized();
 
-  WindowOptions windowOptions = const WindowOptions(
-    size: Size(960, 640),
-    minimumSize: Size(800, 600),
-    center: true,
-    backgroundColor: Colors.transparent,
-    skipTaskbar: false,
-    titleBarStyle: TitleBarStyle.hidden,
-  );
+    // 启动时强制清理一次系统代理，防止上次非正常退出残留
+    await SystemProxyHelper.clearSystemProxy();
 
-  await windowManager.waitUntilReadyToShow(windowOptions, () async {
-    await windowManager.show();
-    await windowManager.focus();
-    // 阻止直接关闭，改为隐藏到托盘
-    await windowManager.setPreventClose(true);
-  });
+    WindowOptions windowOptions = const WindowOptions(
+      size: Size(900, 650),
+      minimumSize: Size(750, 550),
+      center: true,
+      backgroundColor: Colors.transparent,
+      skipTaskbar: false,
+      titleBarStyle: TitleBarStyle.normal,
+    );
+
+    await windowManager.waitUntilReadyToShow(windowOptions, () async {
+      await windowManager.show();
+      await windowManager.focus();
+      // 阻止直接关闭，改为隐藏到托盘
+      await windowManager.setPreventClose(true);
+    });
+  }
 
   runApp(const ProviderScope(child: SluxApp()));
 }
@@ -85,15 +90,20 @@ class _SluxAppState extends ConsumerState<SluxApp> with WindowListener {
   @override
   void initState() {
     super.initState();
-    windowManager.addListener(this);
-    // 初始化托盘服�?
-    ref.read(trayServiceProvider).init();
+    // 只在桌面平台初始化 window_manager 和托盘服务
+    if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
+      windowManager.addListener(this);
+      // 初始化托盘服务
+      ref.read(trayServiceProvider).init();
+    }
     _initRouter();
   }
 
   @override
   void dispose() {
-    windowManager.removeListener(this);
+    if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
+      windowManager.removeListener(this);
+    }
     super.dispose();
   }
 
@@ -104,7 +114,7 @@ class _SluxAppState extends ConsumerState<SluxApp> with WindowListener {
     if (isPreventClose) {
       await windowManager.hide();
     } else {
-      // 彻底退出流程（通常由托盘菜单触�?setPreventClose(false) 后调�?close，或者直�?destroy�?
+      // 彻底退出流程（通常由托盘菜单触�?setPreventClose(false) 后调�?close，或者直�?destroy�?
       await SystemProxyHelper.clearSystemProxy();
       await windowManager.destroy();
     }
@@ -137,7 +147,7 @@ class _SluxAppState extends ConsumerState<SluxApp> with WindowListener {
       _appRouter = GoRouter(
         initialLocation: '/',
         redirect: (context, state) async {
-          // 使用 SharedPreferences 检�?V2Board token
+          // 使用 SharedPreferences 检�?V2Board token
           final prefs = await SharedPreferences.getInstance();
           final isLoggedIn = prefs.getString('v2board_token') != null;
           final isLoggingIn = state.uri.toString() == '/login';
