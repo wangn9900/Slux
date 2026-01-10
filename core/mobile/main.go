@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 
 	box "github.com/sagernet/sing-box"
-	_ "github.com/sagernet/sing-box/include"
+	"github.com/sagernet/sing-box/include"
 	"github.com/sagernet/sing-box/option"
 )
 
@@ -57,8 +57,9 @@ func start(configContent *C.char, tunFd C.int) *C.char {
 		return C.CString("Final Config Parse Error: " + err.Error())
 	}
 
-	// 5. Create Box
-	ctx, cancel = context.WithCancel(context.Background())
+	// 5. Create Box with proper context containing all registries
+	// This is CRITICAL: include.Context() registers all protocol handlers
+	ctx, cancel = context.WithCancel(include.Context(context.Background()))
 	var createErr error
 	instance, createErr = box.New(box.Options{
 		Context: ctx,
