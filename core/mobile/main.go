@@ -43,24 +43,25 @@ func start(configContent *C.char, tunFd C.int) *C.char {
 		return C.CString("JSON Parse Error: " + err.Error())
 	}
 
-	// 3. 注入 Android TUN 文件描述符
-	if tunFd > 0 {
-		if inbounds, ok := rawConfig["inbounds"].([]interface{}); ok {
-			for i, ib := range inbounds {
-				if inbound, ok := ib.(map[string]interface{}); ok {
-					if t, ok := inbound["type"].(string); ok && t == "tun" {
-						inbound["file_descriptor"] = int(tunFd)
-						// 禁用 auto_route，因为 Android VpnService 已经处理了路由
-						inbound["auto_route"] = false
-						inbound["interface_name"] = ""
-						// inbound["platform"] = map[string]interface{}{"http_proxy": map[string]interface{}{"enabled": false}}
-						inbounds[i] = inbound
+	// 3. 注入 Android TUN 文件描述符 (通过 JSON 注入会导致 unknown field 错误)
+	// 我们将在 Unmarshal 之后通过 Go 结构体直接赋值
+	/*
+		if tunFd > 0 {
+			if inbounds, ok := rawConfig["inbounds"].([]interface{}); ok {
+				for i, ib := range inbounds {
+					if inbound, ok := ib.(map[string]interface{}); ok {
+						if t, ok := inbound["type"].(string); ok && t == "tun" {
+							// inbound["file_descriptor"] = int(tunFd) // REMOVED
+							inbound["auto_route"] = false
+							inbound["interface_name"] = ""
+							inbounds[i] = inbound
+						}
 					}
 				}
+				rawConfig["inbounds"] = inbounds
 			}
-			rawConfig["inbounds"] = inbounds
 		}
-	}
+	*/
 
 	// 4. 重新序列化
 	finalBytes, err := json.Marshal(rawConfig)
@@ -73,6 +74,20 @@ func start(configContent *C.char, tunFd C.int) *C.char {
 	// 使用 UnmarshalJSONContext 确保 DNS Transport 等能正确推断
 	if err := options.UnmarshalJSONContext(ctx, finalBytes); err != nil {
 		return C.CString("Context Unmarshal Error: " + err.Error())
+	}
+
+	// 6. 手动注入 TUN File Descriptor
+	if tunFd > 0 {
+		for _, inbound := range options.Inbounds {
+			if inbound.Type == "tun" {
+				// 需要断言为 *option.TunInboundOptions
+				if tunOpts, ok := inbound.Options.(*option.TunInboundOptions); ok {
+					tunOpts.FileDescriptor = int(tunFd)
+					tunOpts.AutoRoute = false  // Android VpnService 负责路由
+					tunOpts.InterfaceName = "" // 清空以免冲突
+				}
+			}
+		}
 	}
 
 	// 强制 Console 输出日志
