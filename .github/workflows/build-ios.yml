@@ -98,7 +98,9 @@ jobs:
           func main() {}
           EOF
           cd core/mobile
-          go mod init libbox
+          if [ ! -f go.mod ]; then
+            go mod init libbox
+          fi
           # Force use stable v1.12.15
           go get github.com/sagernet/sing-box@v1.12.15
           go mod tidy
