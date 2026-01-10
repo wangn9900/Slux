@@ -7,6 +7,7 @@ class ConfigGenerator {
     List<ProxyNode> nodes, {
     int localPort = 20808,
     String? selectedNodeTag,
+    bool blockAds = false, // 实验性广告拦截功能
   }) {
     final Map<String, dynamic> config = {
       "log": {"level": kDebugMode ? "debug" : "info", "timestamp": true},
@@ -57,71 +58,7 @@ class ConfigGenerator {
         },
       ],
       "outbounds": _buildOutbounds(nodes, selectedNodeTag),
-      "route": {
-        "rule_set": [
-          // 中国网站规则集
-          {
-            "type": "remote",
-            "tag": "geosite-cn",
-            "format": "binary",
-            "url":
-                "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-cn.srs",
-            "download_detour": "direct"
-          },
-          // 中国 IP 规则集
-          {
-            "type": "remote",
-            "tag": "geoip-cn",
-            "format": "binary",
-            "url":
-                "https://raw.githubusercontent.com/SagerNet/sing-geoip/rule-set/geoip-cn.srs",
-            "download_detour": "direct"
-          },
-          // 非中国网站规则集（用于强制代理）
-          {
-            "type": "remote",
-            "tag": "geosite-geolocation-!cn",
-            "format": "binary",
-            "url":
-                "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-geolocation-!cn.srs",
-            "download_detour": "direct"
-          },
-        ],
-        "rules": [
-          // DNS 流量走 DNS 出站
-          {"protocol": "dns", "outbound": "dns-out"},
-          // 私有 IP 地址直连
-          {"ip_is_private": true, "outbound": "direct"},
-          // 支付 & 重要国内域名直连（优先级高于规则集）
-          {
-            "domain_suffix": [
-              "niupay.club",
-              "niupay.com",
-              "alipay.com",
-              "alipayobjects.com",
-              "qq.com",
-              "weixin.com",
-              "wechat.com",
-              "tenpay.com",
-              "unionpay.com",
-              "95516.com",
-              "boc.cn",
-              "icbc.com.cn",
-              "cmbchina.com",
-              "ccb.com",
-            ],
-            "outbound": "direct",
-          },
-          // 中国网站直连
-          {"rule_set": "geosite-cn", "outbound": "direct"},
-          // 中国 IP 直连
-          {"rule_set": "geoip-cn", "outbound": "direct"},
-          // 非中国网站走代理
-          {"rule_set": "geosite-geolocation-!cn", "outbound": "proxy"},
-        ],
-        "auto_detect_interface": true,
-        "final": "proxy", // 默认所有流量走 proxy selector
-      },
+      "route": _buildRoute(blockAds),
       "experimental": {
         "clash_api": {"external_controller": "127.0.0.1:9090"},
         // 启用缓存，加速规则集加载
@@ -129,8 +66,29 @@ class ConfigGenerator {
       },
     };
 
+    // 如果启用广告拦截，添加 DNS 拦截规则
+    if (blockAds) {
+      final dnsConfig = config["dns"] as Map<String, dynamic>;
+      // 添加 DNS 拦截服务器
+      (dnsConfig["servers"] as List).add({
+        "type": "local",
+        "tag": "dns_block",
+        "address": "rcode://success", // 返回空结果
+      });
+      // 在 DNS 规则开头添加广告拦截规则
+      (dnsConfig["rules"] as List).insert(1, {
+        "rule_set": [
+          "geosite-category-ads-all",
+          "geosite-malware",
+          "geosite-phishing",
+          "geosite-cryptominers",
+        ],
+        "server": "dns_block",
+      });
+    }
+
     if (kDebugMode) {
-      print('Config generated with localPort: $localPort');
+      print('Config generated with localPort: $localPort, blockAds: $blockAds');
     }
     return jsonEncode(config);
   }
@@ -257,5 +215,152 @@ class ConfigGenerator {
     }
 
     return base;
+  }
+
+  /// 构建路由配置，支持广告拦截
+  static Map<String, dynamic> _buildRoute(bool blockAds) {
+    // 基础规则集
+    final ruleSets = <Map<String, dynamic>>[
+      // 中国网站规则集
+      {
+        "type": "remote",
+        "tag": "geosite-cn",
+        "format": "binary",
+        "url":
+            "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-cn.srs",
+        "download_detour": "direct"
+      },
+      // 中国 IP 规则集
+      {
+        "type": "remote",
+        "tag": "geoip-cn",
+        "format": "binary",
+        "url":
+            "https://raw.githubusercontent.com/SagerNet/sing-geoip/rule-set/geoip-cn.srs",
+        "download_detour": "direct"
+      },
+      // 非中国网站规则集
+      {
+        "type": "remote",
+        "tag": "geosite-geolocation-!cn",
+        "format": "binary",
+        "url":
+            "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-geolocation-!cn.srs",
+        "download_detour": "direct"
+      },
+    ];
+
+    // 基础路由规则
+    final rules = <Map<String, dynamic>>[
+      // DNS 流量走 DNS 出站
+      {"protocol": "dns", "outbound": "dns-out"},
+      // 私有 IP 地址直连
+      {"ip_is_private": true, "outbound": "direct"},
+      // 支付 & 重要国内域名直连
+      {
+        "domain_suffix": [
+          "niupay.club",
+          "niupay.com",
+          "alipay.com",
+          "alipayobjects.com",
+          "qq.com",
+          "weixin.com",
+          "wechat.com",
+          "tenpay.com",
+          "unionpay.com",
+          "95516.com",
+          "boc.cn",
+          "icbc.com.cn",
+          "cmbchina.com",
+          "ccb.com",
+        ],
+        "outbound": "direct",
+      },
+    ];
+
+    // 如果启用广告拦截，添加广告拦截规则集和规则
+    if (blockAds) {
+      // 添加广告/恶意软件规则集
+      ruleSets.addAll([
+        {
+          "type": "remote",
+          "tag": "geosite-category-ads-all",
+          "format": "binary",
+          "url":
+              "https://raw.githubusercontent.com/hiddify/hiddify-geo/rule-set/block/geosite-category-ads-all.srs",
+          "download_detour": "direct"
+        },
+        {
+          "type": "remote",
+          "tag": "geosite-malware",
+          "format": "binary",
+          "url":
+              "https://raw.githubusercontent.com/hiddify/hiddify-geo/rule-set/block/geosite-malware.srs",
+          "download_detour": "direct"
+        },
+        {
+          "type": "remote",
+          "tag": "geosite-phishing",
+          "format": "binary",
+          "url":
+              "https://raw.githubusercontent.com/hiddify/hiddify-geo/rule-set/block/geosite-phishing.srs",
+          "download_detour": "direct"
+        },
+        {
+          "type": "remote",
+          "tag": "geosite-cryptominers",
+          "format": "binary",
+          "url":
+              "https://raw.githubusercontent.com/hiddify/hiddify-geo/rule-set/block/geosite-cryptominers.srs",
+          "download_detour": "direct"
+        },
+        {
+          "type": "remote",
+          "tag": "geoip-malware",
+          "format": "binary",
+          "url":
+              "https://raw.githubusercontent.com/hiddify/hiddify-geo/rule-set/block/geoip-malware.srs",
+          "download_detour": "direct"
+        },
+        {
+          "type": "remote",
+          "tag": "geoip-phishing",
+          "format": "binary",
+          "url":
+              "https://raw.githubusercontent.com/hiddify/hiddify-geo/rule-set/block/geoip-phishing.srs",
+          "download_detour": "direct"
+        },
+      ]);
+
+      // 在规则列表前面插入广告拦截规则（优先级高）
+      rules.insert(2, {
+        "rule_set": [
+          "geosite-category-ads-all",
+          "geosite-malware",
+          "geosite-phishing",
+          "geosite-cryptominers",
+          "geoip-malware",
+          "geoip-phishing",
+        ],
+        "outbound": "block",
+      });
+    }
+
+    // 添加最后的分流规则
+    rules.addAll([
+      // 中国网站直连
+      {"rule_set": "geosite-cn", "outbound": "direct"},
+      // 中国 IP 直连
+      {"rule_set": "geoip-cn", "outbound": "direct"},
+      // 非中国网站走代理
+      {"rule_set": "geosite-geolocation-!cn", "outbound": "proxy"},
+    ]);
+
+    return {
+      "rule_set": ruleSets,
+      "rules": rules,
+      "auto_detect_interface": true,
+      "final": "proxy",
+    };
   }
 }
