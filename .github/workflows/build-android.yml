@@ -30,9 +30,8 @@ jobs:
         run: |
           rm -f go.mod go.sum
           go mod init libcore
-          # 使用完整的 pseudo-version 格式确保依赖正确解析
-          go get golang.org/x/mobile@v0.0.0-20231108233038-35478a0c49da
-          go get golang.org/x/tools@v0.36.0
+          # 使用 @latest 保持与 gomobile 一致
+          go get golang.org/x/mobile@latest
           go get github.com/sagernet/sing-box@v1.12.15
           go mod tidy
           # 调试：显示 go.mod 内容
@@ -40,16 +39,9 @@ jobs:
       
       - name: Setup Gomobile
         run: |
-          # 从官方 x/mobile 源码构建 gomobile，确保版本一致性
-          git clone https://github.com/golang/mobile
-          cd mobile
-          git checkout 35478a0c49da
-          # 升级 x/tools 到 v0.36.0，兼容 Go 1.25
-          go get golang.org/x/tools@v0.36.0
-          go mod tidy
-          # 安装 gomobile 和 gobind
-          go install ./cmd/gomobile
-          go install ./cmd/gobind
+          # 使用最新版 gomobile，Go 1.25 应该兼容
+          go install golang.org/x/mobile/cmd/gomobile@latest
+          go install golang.org/x/mobile/cmd/gobind@latest
           # 配置环境变量
           GOBIND=$(go env GOPATH)/bin/gobind
           echo "GOBIND=$GOBIND" >> $GITHUB_ENV
