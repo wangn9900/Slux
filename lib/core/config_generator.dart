@@ -19,7 +19,11 @@ class ConfigGenerator {
             "server": "8.8.8.8",
             "server_port": 443,
             "path": "/dns-query",
-            "tls": {"enabled": true, "server_name": "dns.google"},
+            "tls": {
+              "enabled": true,
+              "server_name": "dns.google",
+              "insecure": true
+            },
             "detour": "proxy"
           },
           {
@@ -28,7 +32,11 @@ class ConfigGenerator {
             "server": "1.1.1.1",
             "server_port": 443,
             "path": "/dns-query",
-            "tls": {"enabled": true, "server_name": "cloudflare-dns.com"},
+            "tls": {
+              "enabled": true,
+              "server_name": "cloudflare-dns.com",
+              "insecure": true
+            },
             "detour": "proxy"
           },
           {
