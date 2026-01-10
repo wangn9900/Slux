@@ -13,17 +13,17 @@ class ConfigGenerator {
       "log": {"level": kDebugMode ? "debug" : "info", "timestamp": true},
       "dns": {
         "servers": [
-          {"tag": "dns_google", "address": "udp://8.8.8.8", "detour": "proxy"},
           {
-            "tag": "dns_cloudflare",
-            "address": "udp://1.1.1.1",
+            "tag": "dns_google",
+            "address": "https://8.8.8.8/dns-query",
             "detour": "proxy"
           },
           {
-            "tag": "dns_local",
-            "address": "udp://223.5.5.5",
-            "detour": "direct"
+            "tag": "dns_cloudflare",
+            "address": "https://1.1.1.1/dns-query",
+            "detour": "proxy"
           },
+          {"tag": "dns_local", "type": "local"},
         ],
         "rules": [
           // 解析代理服务器地址用本地 DNS（防止循环）
