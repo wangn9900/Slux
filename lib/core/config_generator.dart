@@ -71,7 +71,19 @@ class ConfigGenerator {
           "listen": "127.0.0.1",
           "listen_port": localPort,
           "sniff": true,
-          "set_system_proxy": true,
+          // Android 不能设置系统代理（需要 root），只能靠 TUN
+          "set_system_proxy": Platform.isWindows,
+        },
+        // 添加 TUN Inbound (Android 核心组件)
+        {
+          "type": "tun",
+          "tag": "tun-in",
+          "interface_name": "tun0", // Windows 需要，Android 会被覆盖
+          "inet4_address": "172.19.0.1/30",
+          "auto_route": true, // Windows 需要，Android 在 main.go 会被强行改为 false
+          "strict_route": false,
+          "stack": "gvisor", // 兼容性最好
+          "sniff": true,
         },
       ],
       "outbounds": _buildOutbounds(nodes, selectedNodeTag),
