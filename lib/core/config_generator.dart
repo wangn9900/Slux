@@ -15,11 +15,13 @@ class ConfigGenerator {
         "servers": [
           {
             "tag": "dns_google",
+            "type": "https",
             "address": "https://8.8.8.8/dns-query",
             "detour": "proxy"
           },
           {
             "tag": "dns_cloudflare",
+            "type": "https",
             "address": "https://1.1.1.1/dns-query",
             "detour": "proxy"
           },
