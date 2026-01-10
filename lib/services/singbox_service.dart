@@ -147,13 +147,15 @@ class MobileSingboxService implements ISingboxService {
         await VpnManager.startVpn();
       }
 
-      // 等待 VPN 建立
-      await Future.delayed(const Duration(milliseconds: 500));
+      // 轮询获取 TUN FD (最多等待 4 秒)
+      for (int i = 0; i < 20; i++) {
+        await Future.delayed(const Duration(milliseconds: 200));
+        tunFd = await VpnManager.getTunFd();
+        if (tunFd > 0) break;
+      }
 
-      // 获取 TUN FD
-      tunFd = await VpnManager.getTunFd();
       if (tunFd < 0) {
-        throw Exception("Failed to get TUN file descriptor");
+        throw Exception("Failed to get TUN file descriptor after timeout");
       }
 
       if (kDebugMode) {
