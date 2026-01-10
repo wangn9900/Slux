@@ -40,12 +40,14 @@ jobs:
       
       - name: Setup Gomobile
         run: |
-          # 使用 NekoBox 维护的 gomobile fork
-          git clone -b master2 https://github.com/MatsuriDayo/gomobile
-          cd gomobile
+          # 从官方 x/mobile 源码构建 gomobile，确保版本一致性
+          git clone https://github.com/golang/mobile
+          cd mobile
+          git checkout 35478a0c49da
+          # 安装 gomobile 和 gobind
           go install ./cmd/gomobile
           go install ./cmd/gobind
-          # 配置环境变量并初始化
+          # 配置环境变量
           GOBIND=$(go env GOPATH)/bin/gobind
           echo "GOBIND=$GOBIND" >> $GITHUB_ENV
           gomobile init
