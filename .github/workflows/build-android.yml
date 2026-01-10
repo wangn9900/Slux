@@ -15,7 +15,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          go-version: '1.23'
       
       - name: Setup Android NDK
         uses: nttld/setup-ndk@v1
@@ -43,6 +43,7 @@ jobs:
       - name: Build libbox.aar
         working-directory: core/mobile
         run: |
+          export GOTOOLCHAIN=local
           go mod download
           go get golang.org/x/mobile/bind
           mkdir -p ../../android/app/libs
