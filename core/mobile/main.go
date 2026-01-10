@@ -3,117 +3,88 @@ package main
 import "C"
 
 import (
-	"context"
-	"encoding/json"
 	"runtime/debug"
 	"time"
 
-	box "github.com/sagernet/sing-box"
-	"github.com/sagernet/sing-box/include"
-	"github.com/sagernet/sing-box/option"
+	"github.com/sagernet/sing-box/experimental/libbox"
 )
 
 var (
-	instance *box.Box
-	ctx      context.Context
-	cancel   context.CancelFunc
+	instance *libbox.Service
 )
 
 func init() {
-	// 调整 GC 频率，避免在移动设备上过于频繁的 GC 导致丢包或卡顿
 	debug.SetGCPercent(20)
+}
+
+// 简单的 PlatformInterface 实现
+type SluxPlatform struct {
+	tunFd int
+}
+
+func (p *SluxPlatform) UsePlatformAutoDetectInterfaceControl() bool {
+	return false
+}
+
+func (p *SluxPlatform) AutoDetectInterfaceControl(fd int) error {
+	return nil
+}
+
+func (p *SluxPlatform) OpenTun(options *libbox.TunOptions) (int, error) {
+	// 核心逻辑：当 Sing-box 请求 TUN 时，返回我们从 Android 拿到的 FD
+	return p.tunFd, nil
+}
+
+func (p *SluxPlatform) WriteLog(message string) {
+	// 这里可以桥接日志到 Java，或者直接打印到 Stdout (logcat)
+	println(message)
+}
+
+func (p *SluxPlatform) UseProcFS() bool {
+	return false // Android 通常没有完整的 ProcFS 访问权限
+}
+
+func (p *SluxPlatform) FindConnectionOwner(ipProtocol int, srcAddress string, srcPort int, destAddress string, destPort int) (int, error) {
+	return 0, nil // 可选实现
+}
+
+func (p *SluxPlatform) PackageNameByUid(uid int) (string, error) {
+	return "", nil
+}
+
+func (p *SluxPlatform) UidByPackageName(packageName string) (int, error) {
+	return 0, nil
 }
 
 //export start
 func start(configContent *C.char, tunFd C.int) *C.char {
-	// 防止重复启动
 	if instance != nil {
-		stop()
+		instance.Close()
+		instance = nil
 	}
 
 	configJson := C.GoString(configContent)
 
-	// 1. 初始化 Context (包含所有 Registry)
-	// Sing-box 的 include 包会在 init() 时注册所有标准功能
-	ctx, cancel = context.WithCancel(include.Context(context.Background()))
-
-	// 2. 解析 JSON 到 map 以便进行 fd 注入
-	var rawConfig map[string]interface{}
-	if err := json.Unmarshal([]byte(configJson), &rawConfig); err != nil {
-		return C.CString("JSON Parse Error: " + err.Error())
+	// 创建 Platform 实现，注入 FD
+	platform := &SluxPlatform{
+		tunFd: int(tunFd),
 	}
 
-	// 3. 注入 Android TUN 文件描述符 (通过 JSON 注入会导致 unknown field 错误)
-	// 我们将在 Unmarshal 之后通过 Go 结构体直接赋值
-	/*
-		if tunFd > 0 {
-			if inbounds, ok := rawConfig["inbounds"].([]interface{}); ok {
-				for i, ib := range inbounds {
-					if inbound, ok := ib.(map[string]interface{}); ok {
-						if t, ok := inbound["type"].(string); ok && t == "tun" {
-							// inbound["file_descriptor"] = int(tunFd) // REMOVED
-							inbound["auto_route"] = false
-							inbound["interface_name"] = ""
-							inbounds[i] = inbound
-						}
-					}
-				}
-				rawConfig["inbounds"] = inbounds
-			}
-		}
-	*/
-
-	// 4. 重新序列化
-	finalBytes, err := json.Marshal(rawConfig)
+	// 使用 libbox 启动。libbox 会自动处理 Context, Registry, DNS 等所有事情！
+	// 注意：NewService 后需要调用 Start
+	service, err := libbox.NewService(configJson, platform)
 	if err != nil {
-		return C.CString("JSON Marshal Error: " + err.Error())
+		return C.CString("Libbox NewService Error: " + err.Error())
 	}
 
-	// 5. 解析为 Typed Options (Context-Aware)
-	var options option.Options
-	// 使用 UnmarshalJSONContext 确保 DNS Transport 等能正确推断
-	if err := options.UnmarshalJSONContext(ctx, finalBytes); err != nil {
-		return C.CString("Context Unmarshal Error: " + err.Error())
+	if err := service.Start(); err != nil {
+		service.Close()
+		return C.CString("Libbox Start Error: " + err.Error())
 	}
 
-	// 6. 手动注入 TUN File Descriptor
-	if tunFd > 0 {
-		for _, inbound := range options.Inbounds {
-			if inbound.Type == "tun" {
-				// 需要断言为 *option.TunInboundOptions
-				if tunOpts, ok := inbound.Options.(*option.TunInboundOptions); ok {
-					tunOpts.FileDescriptor = int(tunFd)
-					tunOpts.AutoRoute = false  // Android VpnService 负责路由
-					tunOpts.InterfaceName = "" // 清空以免冲突
-				}
-			}
-		}
-	}
+	instance = service
 
-	// 强制 Console 输出日志
-	if options.Log == nil {
-		options.Log = &option.LogOptions{}
-	}
-	options.Log.Output = "console"
-
-	// 6. 创建 Sing-box 实例
-	var createErr error
-	instance, createErr = box.New(box.Options{
-		Context: ctx,
-		Options: options,
-	})
-	if createErr != nil {
-		return C.CString("Box Create Error: " + createErr.Error())
-	}
-
-	// 7. 启动
-	if err := instance.Start(); err != nil {
-		instance.Close()
-		instance = nil
-		return C.CString("Box Start Error: " + err.Error())
-	}
-
-	// 给一点时间让日志输出
+	// 给点时间初始化
 	time.Sleep(100 * time.Millisecond)
 
 	return nil
@@ -121,16 +92,16 @@ func start(configContent *C.char, tunFd C.int) *C.char {
 
 //export stop
 func stop() {
-	if cancel != nil {
-		cancel()
-		cancel = nil
-	}
 	if instance != nil {
 		instance.Close()
 		instance = nil
 	}
-	// 强制释放内存
 	debug.FreeOSMemory()
+}
+
+//export debug_version
+func debug_version() *C.char {
+	return C.CString("Sing-box 1.12.15 Libbox Native Mode")
 }
 
 func main() {}
