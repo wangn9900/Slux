@@ -19,31 +19,53 @@ var cancel context.CancelFunc
 func start(configContent *C.char, tunFd C.int) *C.char {
 	configJson := C.GoString(configContent)
 
-	// 解析配置
-	var options option.Options
-	if err := json.Unmarshal([]byte(configJson), &options); err != nil {
-		return C.CString("Config Parse Error: " + err.Error())
+	// 1. Unmarshal to generic map to manipulate JSON fields directly
+	var rawConfig map[string]interface{}
+	if err := json.Unmarshal([]byte(configJson), &rawConfig); err != nil {
+		return C.CString("JSON Map Parse Error: " + err.Error())
 	}
 
-	// 如果传入了有效的 VPN FD，注入到 tun inbound 中
+	// 2. Inject TUN File Descriptor
 	if tunFd > 0 {
-		for _, inbound := range options.Inbounds {
-			if inbound.Type == "tun" {
-				if tunOptions, ok := inbound.Options.(*option.TunInboundOptions); ok {
-					tunOptions.FileDescriptor = int(tunFd)
+		if inbounds, ok := rawConfig["inbounds"].([]interface{}); ok {
+			for i, ib := range inbounds {
+				if inbound, ok := ib.(map[string]interface{}); ok {
+					if t, ok := inbound["type"].(string); ok && t == "tun" {
+						// Inject fields recognized by sing-box JSON decoder
+						inbound["file_descriptor"] = int(tunFd)
+						inbound["auto_route"] = false
+						inbound["interface_name"] = ""
+						// Save changes
+						inbounds[i] = inbound
+					}
 				}
 			}
+			// Save updated inbounds list
+			rawConfig["inbounds"] = inbounds
 		}
 	}
 
-	// 创建 Box 实例
+	// 3. Marshal back to bytes
+	newBytes, err := json.Marshal(rawConfig)
+	if err != nil {
+		return C.CString("JSON Remarshal Error: " + err.Error())
+	}
+
+	// 4. Unmarshal to Typed Options
+	var options option.Options
+	if err := json.Unmarshal(newBytes, &options); err != nil {
+		return C.CString("Final Config Parse Error: " + err.Error())
+	}
+
+	// 5. Create Box
 	ctx, cancel = context.WithCancel(context.Background())
-	instance, err = box.New(box.Options{
+	var createErr error
+	instance, createErr = box.New(box.Options{
 		Context: ctx,
 		Options: options,
 	})
-	if err != nil {
-		return C.CString("Create Box Error: " + err.Error())
+	if createErr != nil {
+		return C.CString("Create Box Error: " + createErr.Error())
 	}
 
 	// 启动
