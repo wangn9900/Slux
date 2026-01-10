@@ -53,12 +53,22 @@ jobs:
         run: |
           # Copy tray icon to release directory
           Copy-Item -Path "windows/runner/resources/app_icon.ico" -Destination "build/windows/x64/runner/Release/app_icon.ico"
+          
           # Create zip package
           Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath slux-windows-x64.zip
+          
+          # Create Installer using Inno Setup
+          choco install innosetup -y
+          
+          # Run Inno Setup Compiler
+          # Note: Inno Setup adds itself to PATH, but we might need to refresh env or use full path
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" scripts\windows_installer.iss
         shell: powershell
       
       - name: Upload Windows Build
         uses: actions/upload-artifact@v4
         with:
           name: slux-windows-x64
-          path: slux-windows-x64.zip
+          path: |
+            slux-windows-x64.zip
+            build/windows/x64/slux_setup.exe
