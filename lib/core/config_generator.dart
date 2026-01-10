@@ -16,28 +16,28 @@ class ConfigGenerator {
         "servers": [
           {
             "tag": "dns_google",
-            "type": Platform.isWindows ? "https" : "udp",
+            if (Platform.isWindows) "type": "https",
             if (Platform.isWindows) "server": "8.8.8.8",
             if (!Platform.isWindows) "address": "8.8.8.8",
             "detour": "proxy"
           },
           {
             "tag": "dns_google2",
-            "type": Platform.isWindows ? "https" : "udp",
+            if (Platform.isWindows) "type": "https",
             if (Platform.isWindows) "server": "8.8.4.4",
             if (!Platform.isWindows) "address": "8.8.4.4",
             "detour": "proxy"
           },
           {
             "tag": "dns_cloudflare",
-            "type": Platform.isWindows ? "https" : "udp",
+            if (Platform.isWindows) "type": "https",
             if (Platform.isWindows) "server": "1.1.1.1",
             if (!Platform.isWindows) "address": "1.1.1.1",
             "detour": "proxy"
           },
           {
             "tag": "dns_cloudflare2",
-            "type": Platform.isWindows ? "https" : "udp",
+            if (Platform.isWindows) "type": "https",
             if (Platform.isWindows) "server": "1.0.0.1",
             if (!Platform.isWindows) "address": "1.0.0.1",
             "detour": "proxy"
@@ -70,8 +70,8 @@ class ConfigGenerator {
       "route": _buildRoute(blockAds),
       "experimental": {
         "clash_api": {"external_controller": "127.0.0.1:9090"},
-        // 启用缓存，加速规则集加载
-        "cache_file": {"enabled": true},
+        // 启用缓存，加速规则集加载（仅 Windows，Android 默认目录无写权限）
+        if (Platform.isWindows) "cache_file": {"enabled": true},
       },
     };
 
