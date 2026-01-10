@@ -47,7 +47,9 @@ jobs:
         shell: powershell
       
       - name: Build Windows Release
-        run: flutter build windows --release
+        run: |
+          flutter clean
+          flutter build windows --release
       
       - name: Package Windows App
         run: |
