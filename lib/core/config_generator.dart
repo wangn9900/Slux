@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import '../data/models/proxy_node.dart';
 
@@ -16,13 +17,15 @@ class ConfigGenerator {
           {
             "tag": "dns_google",
             "type": "https",
-            "address": "https://8.8.8.8/dns-query",
+            (Platform.isWindows ? "server" : "address"):
+                Platform.isWindows ? "8.8.8.8" : "https://8.8.8.8/dns-query",
             "detour": "proxy"
           },
           {
             "tag": "dns_cloudflare",
             "type": "https",
-            "address": "https://1.1.1.1/dns-query",
+            (Platform.isWindows ? "server" : "address"):
+                Platform.isWindows ? "1.1.1.1" : "https://1.1.1.1/dns-query",
             "detour": "proxy"
           },
           {"tag": "dns_local", "type": "local"},
@@ -61,21 +64,25 @@ class ConfigGenerator {
     // 如果启用广告拦截，添加 DNS 拦截规则
     if (blockAds) {
       final dnsConfig = config["dns"] as Map<String, dynamic>;
-      // 添加 DNS 拦截服务器
-      (dnsConfig["servers"] as List).add({
-        "tag": "dns_block",
-        "address": "rcode://success", // 返回空结果
-      });
-      // 在 DNS 规则开头添加广告拦截规则
-      (dnsConfig["rules"] as List).insert(1, {
-        "rule_set": [
-          "geosite-category-ads-all",
-          "geosite-malware",
-          "geosite-phishing",
-          "geosite-cryptominers",
-        ],
-        "server": "dns_block",
-      });
+      // Windows Legacy 不支持 rcode:// DNS，跳过 DNS 层拦截
+      // 广告拦截仍由 Route Rules 的 action: reject 提供
+      if (!Platform.isWindows) {
+        // 添加 DNS 拦截服务器 (仅非 Windows)
+        (dnsConfig["servers"] as List).add({
+          "tag": "dns_block",
+          "address": "rcode://success", // 返回空结果
+        });
+        // 在 DNS 规则开头添加广告拦截规则
+        (dnsConfig["rules"] as List).insert(1, {
+          "rule_set": [
+            "geosite-category-ads-all",
+            "geosite-malware",
+            "geosite-phishing",
+            "geosite-cryptominers",
+          ],
+          "server": "dns_block",
+        });
+      }
     }
 
     if (kDebugMode) {
