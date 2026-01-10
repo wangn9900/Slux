@@ -31,8 +31,6 @@ jobs:
           # 如果 go.mod 存在则删除重新生成，确保干净
           rm -f go.mod go.sum
           go mod init libcore
-          # 关键：使用本地 sing-box 源码，确保版本一致性
-          go mod edit -replace github.com/sagernet/sing-box=../../
           # 手动添加必要依赖，对应 NekoBox 配置
           go get golang.org/x/mobile@35478a0c49da
           go get github.com/sagernet/sing-box@v1.12.15
