@@ -30,13 +30,13 @@ jobs:
         run: |
           rm -f go.mod go.sum
           go mod init libcore
-          # 移除 replace 以避免 vendor 模式校验失败
-          # 显式 require 兼容版本的 mobile 和 tools
-          go get golang.org/x/mobile@35478a0c49da
+          # 使用完整的 pseudo-version 格式确保依赖正确解析
+          go get golang.org/x/mobile@v0.0.0-20231108233038-35478a0c49da
           go get golang.org/x/tools@v0.36.0
           go get github.com/sagernet/sing-box@v1.12.15
           go mod tidy
-          go mod vendor
+          # 调试：显示 go.mod 内容
+          cat go.mod
       
       - name: Setup Gomobile
         run: |
@@ -53,16 +53,13 @@ jobs:
       - name: Build libbox.aar
         working-directory: core/mobile
         run: |
-          # 使用 vendor 模式构建
+          # 使用标准 module 模式构建
           mkdir -p ../../android/app/libs
-          # 必须加上 -mod=vendor
           gomobile bind -v -androidapi 21 -target=android \
             -ldflags='-s -w' \
             -tags='with_conntrack,with_gvisor,with_quic,with_wireguard,with_utls,with_clash_api' \
             -o ../../android/app/libs/libbox.aar \
             . github.com/sagernet/sing-box/experimental/libbox
-          ls -l ../../android/app/libs/
-          gomobile bind -v -androidapi 21 -target=android -o ../../android/app/libs/libbox.aar . github.com/sagernet/sing-box/experimental/libbox
           ls -l ../../android/app/libs/
       
       - name: Copy to jniLibs
