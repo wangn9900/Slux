@@ -30,10 +30,9 @@ jobs:
         run: |
           rm -f go.mod go.sum
           go mod init libcore
-          # 强制锁定 x/mobile 版本 (Nov 2023)，防止被上游依赖自动升级
-          go mod edit -replace golang.org/x/mobile=golang.org/x/mobile@v0.0.0-20231108233038-35478a0c49da
+          # 移除 replace 以避免 vendor 模式校验失败
+          # 显式 require 兼容版本的 mobile 和 tools
           go get golang.org/x/mobile@35478a0c49da
-          # 锁定 x/tools 到 v0.36.0 (NekoBox 标准)
           go get golang.org/x/tools@v0.36.0
           go get github.com/sagernet/sing-box@v1.12.15
           go mod tidy
