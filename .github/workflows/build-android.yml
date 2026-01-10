@@ -37,23 +37,28 @@ jobs:
       
       - name: Setup Gomobile
         run: |
-          git clone https://github.com/golang/mobile
-          cd mobile
-          git checkout e6ae53a
-          go get golang.org/x/tools@latest
-          go mod tidy
+          # 使用 NekoBox 维护的 gomobile fork，解决兼容性问题
+          git clone -b master2 https://github.com/MatsuriDayo/gomobile
+          cd gomobile
           go install ./cmd/gomobile
           go install ./cmd/gobind
+          gomobile init
 
       - name: Build libbox.aar
         working-directory: core/mobile
         run: |
           go mod download
+          # 同步 NekoBox 的 x/mobile 版本 (Nov 2023) 或保持兼容
           go get golang.org/x/mobile/bind@e6ae53a
           go get golang.org/x/tools@latest
           go mod tidy
           mkdir -p ../../android/app/libs
-          gomobile bind -v -androidapi 21 -target=android -o ../../android/app/libs/libbox.aar . github.com/sagernet/sing-box/experimental/libbox
+          # 添加关键 tags：支持 gvisor, quic, wireguard, utls(Reality) 等
+          gomobile bind -v -androidapi 21 -target=android \
+            -ldflags='-s -w' \
+            -tags='with_conntrack,with_gvisor,with_quic,with_wireguard,with_utls,with_clash_api' \
+            -o ../../android/app/libs/libbox.aar \
+            . github.com/sagernet/sing-box/experimental/libbox
           ls -l ../../android/app/libs/
           gomobile bind -v -androidapi 21 -target=android -o ../../android/app/libs/libbox.aar . github.com/sagernet/sing-box/experimental/libbox
           ls -l ../../android/app/libs/
