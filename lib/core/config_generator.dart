@@ -18,17 +18,28 @@ class ConfigGenerator {
             "tag": "dns_google",
             if (Platform.isWindows) "type": "https",
             if (Platform.isWindows) "server": "8.8.8.8",
-            if (!Platform.isWindows) "address": "https://dns.google/dns-query",
-            if (!Platform.isWindows) "address_resolver": "dns_local",
+            if (!Platform.isWindows) "address": "8.8.8.8",
+            "detour": "proxy"
+          },
+          {
+            "tag": "dns_google2",
+            if (Platform.isWindows) "type": "https",
+            if (Platform.isWindows) "server": "8.8.4.4",
+            if (!Platform.isWindows) "address": "8.8.4.4",
             "detour": "proxy"
           },
           {
             "tag": "dns_cloudflare",
             if (Platform.isWindows) "type": "https",
             if (Platform.isWindows) "server": "1.1.1.1",
-            if (!Platform.isWindows)
-              "address": "https://cloudflare-dns.com/dns-query",
-            if (!Platform.isWindows) "address_resolver": "dns_local",
+            if (!Platform.isWindows) "address": "1.1.1.1",
+            "detour": "proxy"
+          },
+          {
+            "tag": "dns_cloudflare2",
+            if (Platform.isWindows) "type": "https",
+            if (Platform.isWindows) "server": "1.0.0.1",
+            if (!Platform.isWindows) "address": "1.0.0.1",
             "detour": "proxy"
           },
           {"tag": "dns_local", "type": "local"},
