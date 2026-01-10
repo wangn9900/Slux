@@ -39,6 +39,7 @@ jobs:
         run: |
           go install golang.org/x/mobile/cmd/gomobile@latest
           gomobile init
+          go get golang.org/x/mobile/bind
 
       - name: Build libbox.aar
         working-directory: core/mobile
