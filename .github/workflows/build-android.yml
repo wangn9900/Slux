@@ -31,8 +31,8 @@ jobs:
           if [ ! -f go.mod ]; then
             go mod init libbox
           fi
-          # 使用稳定版本 v1.11.0 而不是 @latest，避免 API 兼容性问题
-          go get github.com/sagernet/sing-box@v1.11.0
+          # 使用 v1.12.15 稳定版，支持最新的 DNS/TLS 配置结构
+          go get github.com/sagernet/sing-box@v1.12.15
           go mod tidy
       
       - name: Build libbox.so for arm64-v8a

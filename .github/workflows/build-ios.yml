@@ -65,6 +65,7 @@ jobs:
               "context"
               "encoding/json"
               box "github.com/sagernet/sing-box"
+              "github.com/sagernet/sing-box/include"
               "github.com/sagernet/sing-box/option"
           )
           var instance *box.Box
@@ -77,7 +78,8 @@ jobs:
               if err := json.Unmarshal([]byte(configJson), &options); err != nil {
                   return C.CString("Config Parse Error: " + err.Error())
               }
-              ctx, cancel = context.WithCancel(context.Background())
+              // CRITICAL: include.Context registers all protocol handlers for sing-box 1.12+
+              ctx, cancel = context.WithCancel(include.Context(context.Background()))
               var err error
               instance, err = box.New(box.Options{Context: ctx, Options: options})
               if err != nil {
@@ -97,7 +99,8 @@ jobs:
           EOF
           cd core/mobile
           go mod init libbox
-          go get github.com/sagernet/sing-box@latest
+          # Force use stable v1.12.15
+          go get github.com/sagernet/sing-box@v1.12.15
           go mod tidy
           # Build for iOS arm64
           CGO_ENABLED=1 GOOS=ios GOARCH=arm64 \

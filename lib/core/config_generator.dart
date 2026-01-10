@@ -16,15 +16,19 @@ class ConfigGenerator {
           {
             "type": "https",
             "tag": "dns_google",
-            "server": "dns.google",
+            "server": "8.8.8.8",
             "server_port": 443,
+            "path": "/dns-query",
+            "tls": {"enabled": true, "server_name": "dns.google"},
             "detour": "proxy"
           },
           {
             "type": "https",
             "tag": "dns_cloudflare",
-            "server": "cloudflare-dns.com",
+            "server": "1.1.1.1",
             "server_port": 443,
+            "path": "/dns-query",
+            "tls": {"enabled": true, "server_name": "cloudflare-dns.com"},
             "detour": "proxy"
           },
           {
@@ -38,11 +42,6 @@ class ConfigGenerator {
         "rules": [
           // 解析代理服务器地址用本地 DNS（防止循环）
           {"outbound": "any", "server": "dns_local"},
-          // 解析 DoH 域名用本地 DNS
-          {
-            "domain": ["dns.google", "cloudflare-dns.com"],
-            "server": "dns_local"
-          },
           // 中国域名用本地 DNS（快速解析）
           {"rule_set": "geosite-cn", "server": "dns_local"},
           // 其他域名用加密 DNS（走代理，防泄露）

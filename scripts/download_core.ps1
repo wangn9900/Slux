@@ -62,20 +62,9 @@ if ($Proxy) {
     $env:HTTPS_PROXY = $Proxy
 }
 
-# Get latest version
-Write-ColorOutput Cyan "Fetching latest Sing-box version..."
-try {
-    $LatestRelease = Invoke-RestMethod -Uri "https://api.github.com/repos/SagerNet/sing-box/releases/latest" -Headers @{
-        "User-Agent" = "Slux-Builder"
-    } -Proxy $Proxy
-    $LatestVersion = $LatestRelease.tag_name.TrimStart('v')
-    Write-ColorOutput Green "Latest version: v$LatestVersion"
-}
-catch {
-    Write-ColorOutput Red "Failed to fetch latest version: $_"
-    Write-ColorOutput Yellow "Using default version 1.8.0"
-    $LatestVersion = "1.8.0"
-}
+# Get specific version (Locked to v1.12.15 to match Android/iOS core)
+Write-ColorOutput Cyan "Fetching Sing-box version v1.12.15..."
+$LatestVersion = "1.12.15"
 
 # Determine download filename based on platform
 $DownloadFileName = switch ($Platform) {
