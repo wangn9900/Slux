@@ -60,11 +60,6 @@ jobs:
           # Create Installer using Inno Setup
           choco install innosetup -y
           
-          # Download ChineseSimplified.isl
-          $LanguageDir = "C:\Program Files (x86)\Inno Setup 6\Languages"
-          $Url = "https://raw.githubusercontent.com/jrsoftware/issrc/main/Files/Languages/ChineseSimplified.isl"
-          Invoke-WebRequest -Uri $Url -OutFile "$LanguageDir\ChineseSimplified.isl"
-
           # Run Inno Setup Compiler
           # Note: Inno Setup adds itself to PATH, but we might need to refresh env or use full path
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" scripts\windows_installer.iss
