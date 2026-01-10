@@ -6,6 +6,7 @@ import (
 	"context"
 
 	box "github.com/sagernet/sing-box"
+	_ "github.com/sagernet/sing-box/include"
 	"github.com/sagernet/sing-box/option"
 )
 
