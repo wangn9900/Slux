@@ -18,6 +18,7 @@ class ConfigGenerator {
             "tag": "dns_google",
             "server": "dns.google",
             "server_port": 443,
+            "server_name": "dns.google",
             "detour": "proxy"
           },
           {
@@ -25,6 +26,7 @@ class ConfigGenerator {
             "tag": "dns_cloudflare",
             "server": "cloudflare-dns.com",
             "server_port": 443,
+            "server_name": "cloudflare-dns.com",
             "detour": "proxy"
           },
           {
