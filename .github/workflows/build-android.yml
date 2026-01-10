@@ -37,15 +37,14 @@ jobs:
       
       - name: Setup Gomobile
         run: |
-          go install golang.org/x/mobile/cmd/gomobile@latest
+          go install golang.org/x/mobile/cmd/gomobile@v0.0.0-20240909193630-31121d51f22e
           gomobile init
 
       - name: Build libbox.aar
         working-directory: core/mobile
         run: |
-          export GOTOOLCHAIN=local
           go mod download
-          go get golang.org/x/mobile/bind
+          go get golang.org/x/mobile/bind@v0.0.0-20240909193630-31121d51f22e
           mkdir -p ../../android/app/libs
           gomobile bind -v -androidapi 21 -target=android -o ../../android/app/libs/libbox.aar . github.com/sagernet/sing-box/experimental/libbox
           ls -l ../../android/app/libs/
