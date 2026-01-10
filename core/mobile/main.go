@@ -4,6 +4,7 @@ import "C"
 
 import (
 	"context"
+	"encoding/json"
 
 	box "github.com/sagernet/sing-box"
 	_ "github.com/sagernet/sing-box/include"
@@ -19,8 +20,8 @@ func start(configContent *C.char, tunFd C.int) *C.char {
 	configJson := C.GoString(configContent)
 
 	// 解析配置
-	options, err := option.UnmarshalJSON([]byte(configJson))
-	if err != nil {
+	var options option.Options
+	if err := json.Unmarshal([]byte(configJson), &options); err != nil {
 		return C.CString("Config Parse Error: " + err.Error())
 	}
 
