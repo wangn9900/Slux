@@ -41,10 +41,11 @@ jobs:
           gomobile init
 
       - name: Build libbox.aar
+        working-directory: core/mobile
         run: |
-          mkdir -p android/app/libs
-          gomobile bind -v -androidapi 21 -target=android -o android/app/libs/libbox.aar ./core/mobile github.com/sagernet/sing-box/experimental/libbox
-          ls -l android/app/libs/
+          mkdir -p ../../android/app/libs
+          gomobile bind -v -androidapi 21 -target=android -o ../../android/app/libs/libbox.aar . github.com/sagernet/sing-box/experimental/libbox
+          ls -l ../../android/app/libs/
       
       - name: Copy to jniLibs
         run: |
