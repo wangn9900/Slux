@@ -49,7 +49,6 @@ jobs:
           # 配置环境变量并初始化
           GOBIND=$(go env GOPATH)/bin/gobind
           echo "GOBIND=$GOBIND" >> $GITHUB_ENV
-          $GOBIND version
           gomobile init
 
       - name: Build libbox.aar
