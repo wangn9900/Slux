@@ -106,7 +106,9 @@ jobs:
           convert "$SOURCE_ICON" -resize 192x192 "$ANDROID_PATH/mipmap-xxxhdpi/ic_launcher.png"
       
       - name: Build Android APK
-        run: flutter build apk --release
+        run: |
+          flutter clean
+          flutter build apk --release
       
       - name: Upload APK
         uses: actions/upload-artifact@v4
