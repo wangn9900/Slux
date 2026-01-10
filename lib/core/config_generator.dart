@@ -13,38 +13,9 @@ class ConfigGenerator {
       "log": {"level": kDebugMode ? "debug" : "info", "timestamp": true},
       "dns": {
         "servers": [
-          {
-            "type": "https",
-            "tag": "dns_google",
-            "server": "8.8.8.8",
-            "server_port": 443,
-            "path": "/dns-query",
-            "tls": {
-              "enabled": true,
-              "server_name": "dns.google",
-              "insecure": true
-            },
-            "detour": "proxy"
-          },
-          {
-            "type": "https",
-            "tag": "dns_cloudflare",
-            "server": "1.1.1.1",
-            "server_port": 443,
-            "path": "/dns-query",
-            "tls": {
-              "enabled": true,
-              "server_name": "cloudflare-dns.com",
-              "insecure": true
-            },
-            "detour": "proxy"
-          },
-          {
-            "type": "udp",
-            "tag": "dns_local",
-            "server": "223.5.5.5",
-            "server_port": 53
-          },
+          {"tag": "dns_google", "address": "8.8.8.8", "detour": "proxy"},
+          {"tag": "dns_cloudflare", "address": "1.1.1.1", "detour": "proxy"},
+          {"tag": "dns_local", "address": "223.5.5.5", "detour": "direct"},
         ],
         "rules": [
           // 解析代理服务器地址用本地 DNS（防止循环）
@@ -82,7 +53,6 @@ class ConfigGenerator {
       final dnsConfig = config["dns"] as Map<String, dynamic>;
       // 添加 DNS 拦截服务器
       (dnsConfig["servers"] as List).add({
-        "type": "local",
         "tag": "dns_block",
         "address": "rcode://success", // 返回空结果
       });
