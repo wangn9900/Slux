@@ -44,6 +44,9 @@ jobs:
           git clone https://github.com/golang/mobile
           cd mobile
           git checkout 35478a0c49da
+          # 升级 x/tools 到 v0.36.0，兼容 Go 1.25
+          go get golang.org/x/tools@v0.36.0
+          go mod tidy
           # 安装 gomobile 和 gobind
           go install ./cmd/gomobile
           go install ./cmd/gobind
