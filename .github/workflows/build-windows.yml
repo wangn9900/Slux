@@ -53,6 +53,9 @@ jobs:
         run: |
           # Copy tray icon to release directory
           Copy-Item -Path "windows/runner/resources/app_icon.ico" -Destination "build/windows/x64/runner/Release/app_icon.ico"
+
+          # Copy sing-box core to release directory
+          Copy-Item -Path "assets/core" -Destination "build/windows/x64/runner/Release" -Recurse
           
           # Create zip package
           Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath slux-windows-x64.zip
