@@ -128,8 +128,6 @@ class ConfigGenerator {
 
     // Default outbounds
     outbounds.add({"type": "direct", "tag": "direct"});
-    outbounds.add({"type": "block", "tag": "block"});
-    outbounds.add({"type": "dns", "tag": "dns-out"});
 
     return outbounds;
   }
@@ -243,8 +241,8 @@ class ConfigGenerator {
 
     // 基础路由规则
     final rules = <Map<String, dynamic>>[
-      // DNS 流量走 DNS 出站
-      {"protocol": "dns", "outbound": "dns-out"},
+      // DNS 流量走 DNS 出站 -> 改为 hijack-dns
+      {"protocol": "dns", "action": "hijack-dns"},
       // 私有 IP 地址直连
       {"ip_is_private": true, "outbound": "direct"},
       // 支付 & 重要国内域名直连
@@ -333,7 +331,7 @@ class ConfigGenerator {
           "geoip-malware",
           "geoip-phishing",
         ],
-        "outbound": "block",
+        "action": "reject",
       });
     }
 

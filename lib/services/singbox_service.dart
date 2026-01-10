@@ -65,7 +65,6 @@ class DesktopSingboxService implements ISingboxService {
       _process = await Process.start(
         exePath,
         ['run', '-c', configPath],
-        environment: {'ENABLE_DEPRECATED_SPECIAL_OUTBOUNDS': 'true'},
         runInShell: false,
         mode: ProcessStartMode.normal,
       );
