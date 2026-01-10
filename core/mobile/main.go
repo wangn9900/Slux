@@ -9,6 +9,10 @@ import (
 	box "github.com/sagernet/sing-box"
 	"github.com/sagernet/sing-box/include"
 	"github.com/sagernet/sing-box/option"
+
+	// Force DNS transport registration
+	_ "github.com/sagernet/sing-box/dns/transport"
+	_ "github.com/sagernet/sing-box/dns/transport/local"
 )
 
 var instance *box.Box
