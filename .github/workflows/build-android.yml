@@ -28,32 +28,37 @@ jobs:
       - name: Initialize Go module
         working-directory: core/mobile
         run: |
-          if [ ! -f go.mod ]; then
-            go mod init libbox
-          fi
-          # 使用 v1.12.15 稳定版，支持最新的 DNS/TLS 配置结构
+          # 如果 go.mod 存在则删除重新生成，确保干净
+          rm -f go.mod go.sum
+          go mod init libcore
+          # 关键：使用本地 sing-box 源码，确保版本一致性
+          go mod edit -replace github.com/sagernet/sing-box=../../
+          # 手动添加必要依赖，对应 NekoBox 配置
+          go get golang.org/x/mobile@35478a0c49da
           go get github.com/sagernet/sing-box@v1.12.15
           go mod tidy
       
       - name: Setup Gomobile
         run: |
-          # 使用 NekoBox 维护的 gomobile fork，解决兼容性问题
+          # 使用 NekoBox 维护的 gomobile fork
           git clone -b master2 https://github.com/MatsuriDayo/gomobile
           cd gomobile
           go install ./cmd/gomobile
           go install ./cmd/gobind
+          # 配置环境变量并初始化
+          GOBIND=$(go env GOPATH)/bin/gobind
+          echo "GOBIND=$GOBIND" >> $GITHUB_ENV
+          $GOBIND version
           gomobile init
 
       - name: Build libbox.aar
         working-directory: core/mobile
         run: |
-          go mod download
-          # 同步 NekoBox 的 x/mobile 版本 (35478a0c49da - Nov 2023)
-          go get golang.org/x/mobile/bind@35478a0c49da
+          # 确保依赖最新
           go get golang.org/x/tools@latest
           go mod tidy
           mkdir -p ../../android/app/libs
-          # 添加关键 tags：支持 gvisor, quic, wireguard, utls(Reality) 等
+          # 构建 AAR
           gomobile bind -v -androidapi 21 -target=android \
             -ldflags='-s -w' \
             -tags='with_conntrack,with_gvisor,with_quic,with_wireguard,with_utls,with_clash_api' \
