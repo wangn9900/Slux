@@ -40,7 +40,7 @@ jobs:
           export CC=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android29-clang
           export CXX=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android29-clang++
           CGO_ENABLED=1 GOOS=android GOARCH=arm64 \
-          go build -tags "with_gvisor,with_quic,with_wireguard,with_utls,with_reality_server,with_clash_api,with_grpc" -buildmode=c-shared -trimpath -ldflags="-s -w" -o libbox.so main.go
+          go build -tags "with_gvisor,with_quic,with_wireguard,with_utls,with_clash_api,with_grpc" -buildmode=c-shared -trimpath -ldflags="-s -w" -o libbox.so main.go
       
       - name: Build libbox.so for armeabi-v7a
         working-directory: core/mobile
@@ -48,7 +48,7 @@ jobs:
           export CC=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi29-clang
           export CXX=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi29-clang++
           CGO_ENABLED=1 GOOS=android GOARCH=arm GOARM=7 \
-          go build -tags "with_gvisor,with_quic,with_wireguard,with_utls,with_reality_server,with_clash_api,with_grpc" -buildmode=c-shared -trimpath -ldflags="-s -w" -o libbox-armeabi-v7a.so main.go
+          go build -tags "with_gvisor,with_quic,with_wireguard,with_utls,with_clash_api,with_grpc" -buildmode=c-shared -trimpath -ldflags="-s -w" -o libbox-armeabi-v7a.so main.go
       
       - name: Build libbox.so for x86_64
         working-directory: core/mobile
@@ -56,7 +56,7 @@ jobs:
           export CC=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android29-clang
           export CXX=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android29-clang++
           CGO_ENABLED=1 GOOS=android GOARCH=amd64 \
-          go build -tags "with_gvisor,with_quic,with_wireguard,with_utls,with_reality_server,with_clash_api,with_grpc" -buildmode=c-shared -trimpath -ldflags="-s -w" -o libbox-x86_64.so main.go
+          go build -tags "with_gvisor,with_quic,with_wireguard,with_utls,with_clash_api,with_grpc" -buildmode=c-shared -trimpath -ldflags="-s -w" -o libbox-x86_64.so main.go
       
       - name: Copy to jniLibs
         run: |
