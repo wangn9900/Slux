@@ -16,17 +16,19 @@ class ConfigGenerator {
           {
             "type": "https",
             "tag": "dns_google",
-            "server": "dns.google",
+            "server": "8.8.8.8",
             "server_port": 443,
-            "tls": {"enabled": true, "server_name": "dns.google"},
+            "path": "/dns-query",
+            "tls": {"server_name": "dns.google"},
             "detour": "proxy"
           },
           {
             "type": "https",
             "tag": "dns_cloudflare",
-            "server": "cloudflare-dns.com",
+            "server": "1.1.1.1",
             "server_port": 443,
-            "tls": {"enabled": true, "server_name": "cloudflare-dns.com"},
+            "path": "/dns-query",
+            "tls": {"server_name": "cloudflare-dns.com"},
             "detour": "proxy"
           },
           {
