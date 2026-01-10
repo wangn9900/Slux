@@ -42,7 +42,14 @@ class ConfigGenerator {
             if (!Platform.isWindows) "address": "1.0.0.1",
             "detour": "proxy"
           },
-          {"tag": "dns_local", "type": "local"},
+          {
+            "tag": "dns_local",
+            if (Platform.isWindows) "type": "local",
+            if (!Platform.isWindows) ...{
+              "address": "223.5.5.5",
+              "detour": "direct"
+            }
+          },
         ],
         "rules": [
           // 解析代理服务器地址用本地 DNS（防止循环）
@@ -231,33 +238,31 @@ class ConfigGenerator {
   static Map<String, dynamic> _buildRoute(bool blockAds) {
     // 基础规则集
     final ruleSets = <Map<String, dynamic>>[
-      // 中国网站规则集
-      {
-        "type": "remote",
-        "tag": "geosite-cn",
-        "format": "binary",
-        "url":
-            "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-cn.srs",
-        "download_detour": "proxy"
-      },
-      // 中国 IP 规则集
-      {
-        "type": "remote",
-        "tag": "geoip-cn",
-        "format": "binary",
-        "url":
-            "https://raw.githubusercontent.com/SagerNet/sing-geoip/rule-set/geoip-cn.srs",
-        "download_detour": "proxy"
-      },
-      // 非中国网站规则集
-      {
-        "type": "remote",
-        "tag": "geosite-geolocation-!cn",
-        "format": "binary",
-        "url":
-            "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-geolocation-!cn.srs",
-        "download_detour": "proxy"
-      },
+      // 暂时禁用远程规则集以确保稳定性（避免下载失败导致 Crash）
+      // {
+      //   "type": "remote",
+      //   "tag": "geosite-cn",
+      //   "format": "binary",
+      //   "url":
+      //       "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-cn.srs",
+      //   "download_detour": "proxy"
+      // },
+      // {
+      //   "type": "remote",
+      //   "tag": "geoip-cn",
+      //   "format": "binary",
+      //   "url":
+      //       "https://raw.githubusercontent.com/SagerNet/sing-geoip/rule-set/geoip-cn.srs",
+      //   "download_detour": "proxy"
+      // },
+      // {
+      //   "type": "remote",
+      //   "tag": "geosite-geolocation-!cn",
+      //   "format": "binary",
+      //   "url":
+      //       "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-geolocation-!cn.srs",
+      //   "download_detour": "proxy"
+      // },
     ];
 
     // 基础路由规则
@@ -289,7 +294,9 @@ class ConfigGenerator {
     ];
 
     // 如果启用广告拦截，添加广告拦截规则集和规则
-    if (blockAds) {
+    // 如果启用广告拦截，添加广告拦截规则集和规则
+    // 暂时禁用广告拦截规则，因为依赖 remote rule-set
+    if (false && blockAds) {
       // 添加广告/恶意软件规则集
       ruleSets.addAll([
         {
@@ -300,46 +307,7 @@ class ConfigGenerator {
               "https://raw.githubusercontent.com/hiddify/hiddify-geo/rule-set/block/geosite-category-ads-all.srs",
           "download_detour": "direct"
         },
-        {
-          "type": "remote",
-          "tag": "geosite-malware",
-          "format": "binary",
-          "url":
-              "https://raw.githubusercontent.com/hiddify/hiddify-geo/rule-set/block/geosite-malware.srs",
-          "download_detour": "direct"
-        },
-        {
-          "type": "remote",
-          "tag": "geosite-phishing",
-          "format": "binary",
-          "url":
-              "https://raw.githubusercontent.com/hiddify/hiddify-geo/rule-set/block/geosite-phishing.srs",
-          "download_detour": "direct"
-        },
-        {
-          "type": "remote",
-          "tag": "geosite-cryptominers",
-          "format": "binary",
-          "url":
-              "https://raw.githubusercontent.com/hiddify/hiddify-geo/rule-set/block/geosite-cryptominers.srs",
-          "download_detour": "direct"
-        },
-        {
-          "type": "remote",
-          "tag": "geoip-malware",
-          "format": "binary",
-          "url":
-              "https://raw.githubusercontent.com/hiddify/hiddify-geo/rule-set/block/geoip-malware.srs",
-          "download_detour": "direct"
-        },
-        {
-          "type": "remote",
-          "tag": "geoip-phishing",
-          "format": "binary",
-          "url":
-              "https://raw.githubusercontent.com/hiddify/hiddify-geo/rule-set/block/geoip-phishing.srs",
-          "download_detour": "direct"
-        },
+        // ... (省略其他 rule-set)
       ]);
 
       // 在规则列表前面插入广告拦截规则（优先级高）
@@ -359,11 +327,13 @@ class ConfigGenerator {
     // 添加最后的分流规则
     rules.addAll([
       // 中国网站直连
-      {"rule_set": "geosite-cn", "outbound": "direct"},
+      // {"rule_set": "geosite-cn", "outbound": "direct"},
       // 中国 IP 直连
-      {"rule_set": "geoip-cn", "outbound": "direct"},
+      // {"rule_set": "geoip-cn", "outbound": "direct"},
       // 非中国网站走代理
-      {"rule_set": "geosite-geolocation-!cn", "outbound": "proxy"},
+      // {"rule_set": "geosite-geolocation-!cn", "outbound": "proxy"},
+      // 默认兜底规则：走代理
+      {"outbound": "proxy"} // 确保所有未匹配流量走代理
     ]);
 
     return {
