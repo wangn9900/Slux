@@ -23,13 +23,16 @@ var cancel context.CancelFunc
 func start(configContent *C.char, tunFd C.int) *C.char {
 	configJson := C.GoString(configContent)
 
-	// 1. Unmarshal to generic map to manipulate JSON fields directly
+	// 1. Create context with all registries FIRST (critical for DNS transport parsing)
+	ctx, cancel = context.WithCancel(include.Context(context.Background()))
+
+	// 2. Unmarshal to generic map to manipulate JSON fields directly
 	var rawConfig map[string]interface{}
 	if err := json.Unmarshal([]byte(configJson), &rawConfig); err != nil {
 		return C.CString("JSON Map Parse Error: " + err.Error())
 	}
 
-	// 2. Inject TUN File Descriptor
+	// 3. Inject TUN File Descriptor
 	if tunFd > 0 {
 		if inbounds, ok := rawConfig["inbounds"].([]interface{}); ok {
 			for i, ib := range inbounds {
@@ -49,21 +52,22 @@ func start(configContent *C.char, tunFd C.int) *C.char {
 		}
 	}
 
-	// 3. Marshal back to bytes
+	// 4. Marshal back to bytes
 	newBytes, err := json.Marshal(rawConfig)
 	if err != nil {
 		return C.CString("JSON Remarshal Error: " + err.Error())
 	}
 
-	// 4. Unmarshal to Typed Options
+	// 5. Unmarshal to Typed Options with context aware parsing
 	var options option.Options
-	if err := json.Unmarshal(newBytes, &options); err != nil {
-		return C.CString("Final Config Parse Error: " + err.Error())
+	if err := options.UnmarshalJSONContext(ctx, newBytes); err != nil {
+		// Fallback to standard unmarshal if context-aware method fails
+		if err2 := json.Unmarshal(newBytes, &options); err2 != nil {
+			return C.CString("Final Config Parse Error: " + err.Error() + " / " + err2.Error())
+		}
 	}
 
-	// 5. Create Box with proper context containing all registries
-	// This is CRITICAL: include.Context() registers all protocol handlers
-	ctx, cancel = context.WithCancel(include.Context(context.Background()))
+	// 6. Create Box with proper context containing all registries
 	var createErr error
 	instance, createErr = box.New(box.Options{
 		Context: ctx,
