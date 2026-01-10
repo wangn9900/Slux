@@ -13,10 +13,17 @@ class ConfigGenerator {
       "dns": {
         "servers": [
           {
-            "type": "udp",
+            "type": "https",
             "tag": "dns_google",
-            "server": "8.8.8.8",
-            "server_port": 53,
+            "server": "dns.google",
+            "server_port": 443,
+            "detour": "proxy"
+          },
+          {
+            "type": "https",
+            "tag": "dns_cloudflare",
+            "server": "cloudflare-dns.com",
+            "server_port": 443,
             "detour": "proxy"
           },
           {
