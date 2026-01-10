@@ -35,10 +35,14 @@ class ConfigGenerator {
           },
         ],
         "rules": [
+          // 解析代理服务器地址用本地 DNS（防止循环）
           {"outbound": "any", "server": "dns_local"},
+          // 中国域名用本地 DNS（快速解析）
+          {"rule_set": "geosite-cn", "server": "dns_local"},
+          // 其他域名用加密 DNS（走代理，防泄露）
           {
             "query_type": ["A", "AAAA"],
-            "server": "dns_google",
+            "server": "dns_google"
           },
         ],
       },
@@ -54,9 +58,41 @@ class ConfigGenerator {
       ],
       "outbounds": _buildOutbounds(nodes, selectedNodeTag),
       "route": {
+        "rule_set": [
+          // 中国网站规则集
+          {
+            "type": "remote",
+            "tag": "geosite-cn",
+            "format": "binary",
+            "url":
+                "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-cn.srs",
+            "download_detour": "direct"
+          },
+          // 中国 IP 规则集
+          {
+            "type": "remote",
+            "tag": "geoip-cn",
+            "format": "binary",
+            "url":
+                "https://raw.githubusercontent.com/SagerNet/sing-geoip/rule-set/geoip-cn.srs",
+            "download_detour": "direct"
+          },
+          // 非中国网站规则集（用于强制代理）
+          {
+            "type": "remote",
+            "tag": "geosite-geolocation-!cn",
+            "format": "binary",
+            "url":
+                "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-geolocation-!cn.srs",
+            "download_detour": "direct"
+          },
+        ],
         "rules": [
+          // DNS 流量走 DNS 出站
           {"protocol": "dns", "outbound": "dns-out"},
-          // Payment & Direct domains
+          // 私有 IP 地址直连
+          {"ip_is_private": true, "outbound": "direct"},
+          // 支付 & 重要国内域名直连（优先级高于规则集）
           {
             "domain_suffix": [
               "niupay.club",
@@ -76,16 +112,20 @@ class ConfigGenerator {
             ],
             "outbound": "direct",
           },
-          // 移除 clash_mode 路由规则，它们在 Sing-box 1.12+ 已废弃
-          // 客户端的模式切换通常由 Selector 里的 'Global'/'Direct' 选项接管，
-          // 或者通过修改 config.json 实现。
-          // 这里我们保持最简配置，流量默认走 'proxy' selector。
+          // 中国网站直连
+          {"rule_set": "geosite-cn", "outbound": "direct"},
+          // 中国 IP 直连
+          {"rule_set": "geoip-cn", "outbound": "direct"},
+          // 非中国网站走代理
+          {"rule_set": "geosite-geolocation-!cn", "outbound": "proxy"},
         ],
         "auto_detect_interface": true,
         "final": "proxy", // 默认所有流量走 proxy selector
       },
       "experimental": {
         "clash_api": {"external_controller": "127.0.0.1:9090"},
+        // 启用缓存，加速规则集加载
+        "cache_file": {"enabled": true},
       },
     };
 
