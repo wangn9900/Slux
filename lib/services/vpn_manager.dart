@@ -18,11 +18,11 @@ class VpnManager {
   }
 
   /// 启动 VPN
-  static Future<bool> startVpn() async {
+  static Future<bool> startVpn(String config) async {
     if (!Platform.isAndroid) return false;
 
     try {
-      final result = await _channel.invokeMethod('startVpn');
+      final result = await _channel.invokeMethod('startVpn', config);
       return result as bool;
     } catch (e) {
       print('Start VPN error: $e');
@@ -40,19 +40,6 @@ class VpnManager {
     } catch (e) {
       print('Stop VPN error: $e');
       return false;
-    }
-  }
-
-  /// 获取 TUN 文件描述符
-  static Future<int> getTunFd() async {
-    if (!Platform.isAndroid) return -1;
-
-    try {
-      final result = await _channel.invokeMethod('getTunFd');
-      return result as int;
-    } catch (e) {
-      print('Get TUN FD error: $e');
-      return -1;
     }
   }
 }

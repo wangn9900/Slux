@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
-import '../core/ffi/libbox.dart'; // Import FFI bindings
 import 'vpn_manager.dart'; // Import VPN manager
 
 // 1. 定义接口
@@ -101,7 +100,7 @@ class DesktopSingboxService implements ISingboxService {
   }
 }
 
-// 3. Mobile 实现 (FFI)
+// 3. Mobile 实现 (MethodChannel -> Android Service)
 class MobileSingboxService implements ISingboxService {
   bool _isRunning = false;
 
@@ -110,7 +109,7 @@ class MobileSingboxService implements ISingboxService {
 
   @override
   Future<bool> get isCoreInstalled async {
-    // 移动端核心集成在 App 中 (libbox.so)，不需要检查“安装”
+    // 移动端核心集成在 App 中，不需要检查“安装”
     return true;
   }
 
@@ -126,47 +125,31 @@ class MobileSingboxService implements ISingboxService {
     final content = await file.readAsString();
 
     if (kDebugMode) {
-      print("Starting Sing-box (Mobile FFI with VPN)...");
+      print("Starting Sing-box (Mobile Gomobile)...");
     }
 
-    int tunFd = -1;
-
-    // Android 需要先启动 VPN Service
+    // Android: 直接调用 VPN Service 启动 (传递配置内容)
     if (Platform.isAndroid) {
-      // 检查权限
       final hasPermission = await VpnManager.checkVpnPermission();
       if (!hasPermission) {
-        // 请求权限并启动 VPN
-        final started = await VpnManager.startVpn();
+        // 请求权限并启动 (如果用户同意，Android 层应该会自动启动，但为了保险，可以在回调里再调一次，或者这里直接调)
+        // 实际上，我们的 startVpn 实现中包含了权限请求逻辑
+        final started = await VpnManager.startVpn(content);
         if (!started) {
-          throw Exception("Failed to start VPN service");
+          throw Exception(
+              "Failed to start VPN service (permission denied or error)");
         }
       } else {
         // 已有权限，直接启动
-        await VpnManager.startVpn();
+        final started = await VpnManager.startVpn(content);
+        if (!started) {
+          throw Exception("Failed to start VPN service");
+        }
       }
-
-      // 轮询获取 TUN FD (最多等待 4 秒)
-      for (int i = 0; i < 20; i++) {
-        await Future.delayed(const Duration(milliseconds: 200));
-        tunFd = await VpnManager.getTunFd();
-        if (tunFd > 0) break;
-      }
-
-      if (tunFd < 0) {
-        throw Exception("Failed to get TUN file descriptor after timeout");
-      }
-
-      if (kDebugMode) {
-        print("VPN started, TUN FD: $tunFd");
-      }
-    }
-
-    // 调用 FFI 启动 Sing-box
-    // Android 传递 tunFd，其他平台传递 -1
-    final error = LibBox.start(content, tunFd);
-    if (error != null) {
-      throw Exception("Failed to start libbox: $error");
+    } else {
+      // iOS 未实现
+      // TODO: iOS implementation using NetworkExtension
+      throw UnimplementedError("iOS support not yet migrated to Gomobile");
     }
 
     _isRunning = true;
@@ -174,7 +157,6 @@ class MobileSingboxService implements ISingboxService {
 
   @override
   Future<void> stop() async {
-    LibBox.stop();
     _isRunning = false;
 
     // Android 需要停止 VPN Service

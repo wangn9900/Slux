@@ -19,13 +19,15 @@ class MainActivity: FlutterActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
                 "startVpn" -> {
-                    startVpn(result)
+                    val config = call.arguments as? String
+                    if (config != null) {
+                        startVpn(config, result)
+                    } else {
+                        result.error("INVALID_ARGUMENT", "Config content is required", null)
+                    }
                 }
                 "stopVpn" -> {
                     stopVpn(result)
-                }
-                "getTunFd" -> {
-                    result.success(SluxVpnService.getTunFd())
                 }
                 "checkVpnPermission" -> {
                     val intent = VpnService.prepare(this)
@@ -38,18 +40,23 @@ class MainActivity: FlutterActivity() {
         }
     }
 
-    private fun startVpn(result: MethodChannel.Result) {
+    private fun startVpn(config: String, result: MethodChannel.Result) {
         val intent = VpnService.prepare(this)
         if (intent != null) {
             // 需要请求 VPN 权限
             pendingResult = result
+            // 暂时保存 config 以便在 onActivityResult 中使用 (可以用成员变量)
+            pendingConfig = config
             startActivityForResult(intent, VPN_REQUEST_CODE)
         } else {
             // 已有权限，直接启动
-            launchVpnService()
+            launchVpnService(config)
             result.success(true)
         }
     }
+
+    // 临时存储 config
+    private var pendingConfig: String? = null
 
     private fun stopVpn(result: MethodChannel.Result) {
         val intent = Intent(this, SluxVpnService::class.java).apply {
@@ -59,11 +66,17 @@ class MainActivity: FlutterActivity() {
         result.success(true)
     }
 
-    private fun launchVpnService() {
+    private fun launchVpnService(config: String) {
         val intent = Intent(this, SluxVpnService::class.java).apply {
             action = SluxVpnService.ACTION_CONNECT
+            putExtra(SluxVpnService.EXTRA_CONFIG_CONTENT, config)
         }
-        startService(intent)
+        // 在 Android O+ 需要 startForegroundService，但在 Service 内部我们调了 startForeground，startService 也可以
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            startForegroundService(intent)
+        } else {
+            startService(intent)
+        }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -71,12 +84,13 @@ class MainActivity: FlutterActivity() {
         
         if (requestCode == VPN_REQUEST_CODE) {
             if (resultCode == Activity.RESULT_OK) {
-                launchVpnService()
+                pendingConfig?.let { launchVpnService(it) }
                 pendingResult?.success(true)
             } else {
                 pendingResult?.error("VPN_PERMISSION_DENIED", "用户拒绝了 VPN 权限", null)
             }
             pendingResult = null
+            pendingConfig = null
         }
     }
 }
