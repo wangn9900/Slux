@@ -45,6 +45,7 @@ jobs:
         run: |
           go mod download
           go get golang.org/x/mobile/bind@e6ae53a
+          go get golang.org/x/tools@latest
           go mod tidy
           mkdir -p ../../android/app/libs
           gomobile bind -v -androidapi 21 -target=android -o ../../android/app/libs/libbox.aar . github.com/sagernet/sing-box/experimental/libbox
