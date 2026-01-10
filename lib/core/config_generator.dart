@@ -12,12 +12,23 @@ class ConfigGenerator {
       "log": {"level": kDebugMode ? "debug" : "info", "timestamp": true},
       "dns": {
         "servers": [
-          {"tag": "dns_google", "address": "8.8.8.8", "detour": "proxy"},
-          {"tag": "dns_local", "address": "223.5.5.5", "detour": "direct"},
+          {
+            "type": "udp",
+            "tag": "dns_google",
+            "server": "8.8.8.8",
+            "server_port": 53,
+            "detour": "proxy"
+          },
+          {
+            "type": "udp",
+            "tag": "dns_local",
+            "server": "223.5.5.5",
+            "server_port": 53,
+            "detour": "direct"
+          },
         ],
         "rules": [
           {"outbound": "any", "server": "dns_local"},
-          // 移除 clash_mode 相关规则，使用简化配置
           {
             "query_type": ["A", "AAAA"],
             "server": "dns_google",
@@ -188,8 +199,7 @@ class ConfigGenerator {
       base['transport'] = {
         "type": "ws",
         "path": node.tls['path'] ?? '/',
-        "headers":
-            node.tls['headers'] ??
+        "headers": node.tls['headers'] ??
             {"Host": node.tls['server_name'] ?? node.server},
       };
     } else if (node.network == 'grpc') {
