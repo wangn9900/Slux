@@ -55,7 +55,8 @@ class ConfigGenerator {
           // 解析代理服务器地址用本地 DNS（防止循环）
           {"outbound": "any", "server": "dns_local"},
           // 中国域名用本地 DNS（快速解析）
-          {"rule_set": "geosite-cn", "server": "dns_local"},
+          // 暂时禁用因为 rule-set 被移除了
+          // {"rule_set": "geosite-cn", "server": "dns_local"},
           // 其他域名用加密 DNS（走代理，防泄露）
           {
             "query_type": ["A", "AAAA"],
