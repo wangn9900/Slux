@@ -238,7 +238,7 @@ class ConfigGenerator {
         "format": "binary",
         "url":
             "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-cn.srs",
-        "download_detour": "direct"
+        "download_detour": "proxy"
       },
       // 中国 IP 规则集
       {
@@ -247,7 +247,7 @@ class ConfigGenerator {
         "format": "binary",
         "url":
             "https://raw.githubusercontent.com/SagerNet/sing-geoip/rule-set/geoip-cn.srs",
-        "download_detour": "direct"
+        "download_detour": "proxy"
       },
       // 非中国网站规则集
       {
@@ -256,7 +256,7 @@ class ConfigGenerator {
         "format": "binary",
         "url":
             "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-geolocation-!cn.srs",
-        "download_detour": "direct"
+        "download_detour": "proxy"
       },
     ];
 
