@@ -467,9 +467,13 @@ class _ConnectButtonState extends ConsumerState<_ConnectButton>
           ref.read(proxyProvider.notifier).updateNodes(nodes);
         }
 
+        // 读取广告拦截设置
+        final blockAds = prefs.getBool('blockAds') ?? false;
+
         final configJson = ConfigGenerator.generate(
           nodes,
           selectedNodeTag: proxyState.selectedNode?.name,
+          blockAds: blockAds,
         );
 
         final appDir = await getApplicationSupportDirectory();

@@ -88,6 +88,24 @@ class SettingsScreen extends ConsumerWidget {
             ],
           ),
 
+          const SizedBox(height: 24),
+
+          // 实验性功能
+          _SettingsSection(
+            title: '实验性功能',
+            children: [
+              _SettingsSwitchTile(
+                icon: LucideIcons.shieldOff,
+                title: '广告拦截',
+                subtitle: '拦截广告、恶意软件和钓鱼网站',
+                value: ref.watch(blockAdsProvider),
+                onChanged: (value) {
+                  ref.read(blockAdsProvider.notifier).toggle(value);
+                },
+              ),
+            ],
+          ),
+
           const SizedBox(height: 48),
 
           // Logout Button Area
@@ -237,6 +255,59 @@ class _SettingsTile extends StatelessWidget {
             ),
           ),
           trailing,
+        ],
+      ),
+    );
+  }
+}
+
+class _SettingsSwitchTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  const _SettingsSwitchTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: Theme.of(context).iconTheme.color),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).textTheme.bodySmall?.color,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            value: value,
+            onChanged: onChanged,
+            activeColor: Theme.of(context).primaryColor,
+          ),
         ],
       ),
     );

@@ -64,3 +64,25 @@ class LanguageNotifier extends StateNotifier<Locale?> {
     }
   }
 }
+
+// --- Ad Blocking State ---
+final blockAdsProvider = StateNotifierProvider<BlockAdsNotifier, bool>((ref) {
+  return BlockAdsNotifier();
+});
+
+class BlockAdsNotifier extends StateNotifier<bool> {
+  BlockAdsNotifier() : super(false) {
+    _load();
+  }
+
+  void _load() async {
+    final prefs = await SharedPreferences.getInstance();
+    state = prefs.getBool('blockAds') ?? false;
+  }
+
+  void toggle(bool value) async {
+    state = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('blockAds', value);
+  }
+}
